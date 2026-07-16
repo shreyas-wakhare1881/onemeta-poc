@@ -1,24 +1,57 @@
-# Node
-
+# ==========================
+# Node.js / Next.js
+# ==========================
 node_modules/
+.next/
+out/
 npm-debug.log*
-package-lock.json
-yarn.lock
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
+# Keep lock files in Git
+# package-lock.json
+# yarn.lock
+
+# ==========================
 # Python
-
-__pycache__/
-*.py[cod]
-*.egg-info/
-dist/
-build/
-.env
+# ==========================
+.venv/
 venv/
 env/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+dist/
+build/
 
-# VSCode
+# ==========================
+# Environment Variables
+# ==========================
+.env
+.env.local
+.env.*.local
+
+# Keep examples
+!.env.example
+
+# ==========================
+# VS Code
+# ==========================
 .vscode/
 
-# OS
+# ==========================
+# Operating System
+# ==========================
 .DS_Store
 Thumbs.db
+
+# ==========================
+# Misc
+# ==========================
+coverage/
+*.log
