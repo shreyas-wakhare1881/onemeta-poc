@@ -25,6 +25,7 @@ class AudioConfig:
     # Chunk Sink Bounded Queue Configuration
     chunk_sink_queue_maxsize: int = int(os.getenv("CHUNK_SINK_QUEUE_MAXSIZE", "100"))
     chunk_sink_timeout_sec: float = float(os.getenv("CHUNK_SINK_TIMEOUT_SEC", "0.5"))
+    publisher_queue_size: int = int(os.getenv("PUBLISHER_QUEUE_SIZE", "100"))
 
     # Precomputed Frame Thresholds (as fields initialized in __post_init__)
     max_silence_frames: int = field(init=False)

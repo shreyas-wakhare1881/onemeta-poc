@@ -2,3 +2,6 @@ fastapi==0.95.2
 uvicorn[standard]==0.22.0
 livekit-api==1.2.0
 livekit==1.1.13
+requests
+python-dotenv
+
