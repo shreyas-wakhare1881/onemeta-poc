@@ -1,8 +1,7 @@
 import time
 import logging
-from typing import Iterable, List
+from typing import List
 from ..types.audio import AudioFrame
-from ..types.speech import SpeechChunkMetadata, FlushReason
 
 logger = logging.getLogger("onemeta.telemetry")
 
@@ -66,51 +65,7 @@ class AudioTelemetry:
     def record_dropped(self):
         self.dropped_frames += 1
 
-    def create_chunk_metadata(
-        self, 
-        frames_iterable: Iterable[AudioFrame], 
-        reason: FlushReason, 
-        t_start_ns: int,
-        silence_count: int,
-        average_rms: float,
-        peak_rms: float
-    ) -> SpeechChunkMetadata:
-        """
-        Pure latency and statistical calculator creating strongly typed SpeechChunkMetadata.
-        
-        Single-pass loop over frame collections to avoid intermediate list allocations.
-        """
-        now_ns = time.perf_counter_ns()
-        frames: List[AudioFrame] = list(frames_iterable)
-
-        total_queue_wait_ns = 0.0
-        valid_queue_count = 0
-        total_frame_age_ns = 0.0
-
-        for f in frames:
-            if f.processing_timestamp_ns > 0 and f.queue_timestamp_ns > 0:
-                total_queue_wait_ns += (f.processing_timestamp_ns - f.queue_timestamp_ns)
-                valid_queue_count += 1
-            total_frame_age_ns += (now_ns - f.capture_timestamp_ns)
-
-        avg_queue_wait_ms = (total_queue_wait_ns / valid_queue_count / 1_000_000.0) if valid_queue_count > 0 else 0.0
-        processing_time_ms = (now_ns - t_start_ns) / 1_000_000.0
-        avg_frame_age_ms = (total_frame_age_ns / len(frames) / 1_000_000.0) if frames else 0.0
-
-        # Calculate speech ratio in window
-        speech_frames = len(frames)
-        total_window_frames = speech_frames + silence_count
-        speech_ratio = (speech_frames / total_window_frames) if total_window_frames > 0 else 1.0
-
-        return SpeechChunkMetadata(
-            queue_wait_ms=avg_queue_wait_ms,
-            processing_time_ms=processing_time_ms,
-            end_to_end_age_ms=avg_frame_age_ms,
-            flush_reason=reason,
-            average_rms=average_rms,
-            peak_rms=peak_rms,
-            speech_ratio=speech_ratio
-        )
+    # create_chunk_metadata() removed in Phase 4C — chunk assembly moved to legacy/chunk_pipeline/.
 
     def get_report(self, current_queue_size: int, queue_maxsize: int) -> dict:
         now_ns = time.perf_counter_ns()

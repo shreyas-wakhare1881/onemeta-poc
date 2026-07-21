@@ -1,20 +1,54 @@
-from .config import AIConfig, QueueDropPolicy
-from .events import AIStartedEvent, AIPartialEvent, AICompletedEvent, AIErrorEvent, TranslationFailedEvent
-from .runtime import LocalGemmaRuntime
-from .telemetry import AITelemetry
+from .config import AIConfig
 from .engine import AIEngine
-from .sink import InferenceSink
+from .streaming import (
+    BaseStreamingRuntime,
+    BaseStreamingTransport,
+    StreamingSessionState,
+    StreamingSessionMetrics,
+    StreamingSession,
+    StreamingSessionManager,
+)
+from .runtimes import create_streaming_runtime
+from .runtimes.gemini_live_runtime import GeminiLiveRuntime
+from .events import (
+    StreamingSessionStartedEvent,
+    StreamingAudioFrameReceivedEvent,
+    StreamingSpeechStartedEvent,
+    StreamingSpeechEndedEvent,
+    StreamingPartialTranslationEvent,
+    StreamingTranslationCompletedEvent,
+    StreamingSessionClosedEvent,
+    StreamingBackpressureEvent,
+    StreamingStateChangedEvent,
+    StreamingRuntimeErrorEvent,
+    StreamingTranslationAudioEvent,
+)
 
 __all__ = [
+    # Config
     "AIConfig",
-    "QueueDropPolicy",
-    "AIStartedEvent",
-    "AIPartialEvent",
-    "AICompletedEvent",
-    "AIErrorEvent",
-    "TranslationFailedEvent",
-    "LocalGemmaRuntime",
-    "AITelemetry",
+    # Engine
     "AIEngine",
-    "InferenceSink",
+    # Streaming abstractions
+    "BaseStreamingRuntime",
+    "BaseStreamingTransport",
+    "StreamingSessionState",
+    "StreamingSessionMetrics",
+    "StreamingSession",
+    "StreamingSessionManager",
+    # Runtime factory + provider
+    "create_streaming_runtime",
+    "GeminiLiveRuntime",
+    # Events
+    "StreamingSessionStartedEvent",
+    "StreamingAudioFrameReceivedEvent",
+    "StreamingSpeechStartedEvent",
+    "StreamingSpeechEndedEvent",
+    "StreamingPartialTranslationEvent",
+    "StreamingTranslationCompletedEvent",
+    "StreamingSessionClosedEvent",
+    "StreamingBackpressureEvent",
+    "StreamingStateChangedEvent",
+    "StreamingRuntimeErrorEvent",
+    "StreamingTranslationAudioEvent",
 ]

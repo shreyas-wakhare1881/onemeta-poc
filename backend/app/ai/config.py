@@ -1,34 +1,41 @@
 import os
 from dataclasses import dataclass
-from enum import Enum
-
-class QueueDropPolicy(Enum):
-    DROP_OLDEST = "DROP_OLDEST"
-    DROP_NEWEST = "DROP_NEWEST"
 
 @dataclass
 class AIConfig:
     """
-    Configuration parameters for the AI processing engine.
+    Configuration for the streaming AI pipeline.
+    Provider-agnostic: runtime is selected via streaming_runtime key.
+    Chunk-pipeline configs (Ollama, Transformers, runtime_type) have been
+    removed in Phase 4C. See legacy/chunk_pipeline/ for historical reference.
     """
-    model_path: str = os.getenv("GEMMA_MODEL_PATH", "google/gemma-4-12B-it")
-    device: str = os.getenv("GEMMA_DEVICE", "cuda")
-    queue_maxsize: int = int(os.getenv("AI_QUEUE_MAXSIZE", "3"))
-    queue_drop_policy: QueueDropPolicy = QueueDropPolicy(
-        os.getenv("AI_QUEUE_DROP_POLICY", "DROP_OLDEST")
-    )
+    # Language defaults
     default_source_lang: str = os.getenv("AI_SOURCE_LANG", "English")
     default_target_lang: str = os.getenv("AI_TARGET_LANG", "Spanish")
-    
-    # Selection: "ollama" or "transformers"
-    runtime_type: str = os.getenv("AI_RUNTIME_TYPE", "ollama")
-    
-    # Ollama Specific configs
-    ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-    ollama_model: str = os.getenv("OLLAMA_MODEL", "gemma4:12b")
-    request_timeout: int = int(os.getenv("OLLAMA_REQUEST_TIMEOUT", "30"))
-    max_retries: int = int(os.getenv("OLLAMA_MAX_RETRIES", "3"))
-    
-    # Model Generation configs
+
+    # Streaming runtime selection — extensible for future providers
+    streaming_runtime: str = os.getenv("STREAMING_RUNTIME", "gemini_live_translate")
+
+    # Gemini Live configs
+    gemini_live_model: str = os.getenv("GEMINI_LIVE_MODEL", "models/gemini-2.5-flash-native-audio-latest")
+    gemini_live_api_key: str = os.getenv("GEMINI_LIVE_API_KEY", "")
+    gemini_live_url: str = os.getenv(
+        "GEMINI_LIVE_URL",
+        "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
+    )
+    gemini_live_timeout: float = float(os.getenv("GEMINI_LIVE_TIMEOUT", "10.0"))
+    gemini_live_reconnect_delay: float = float(os.getenv("GEMINI_LIVE_RECONNECT_DELAY", "2.0"))
+    gemini_live_modalities: str = os.getenv("GEMINI_LIVE_MODALITIES", "AUDIO")
+    gemini_live_voice_name: str = os.getenv("GEMINI_LIVE_VOICE_NAME", "Aoede")
+
+    # Gemini Live Translation configs
+    gemini_live_translate_model: str = os.getenv("GEMINI_LIVE_TRANSLATE_MODEL", "models/gemini-3.5-live-translate-preview")
+    target_language: str = os.getenv("TARGET_LANGUAGE", "es")
+    publish_source_transcript: bool = os.getenv("PUBLISH_SOURCE_TRANSCRIPT", "false").lower() == "true"
+    gemini_live_translate_echo: bool = os.getenv("GEMINI_LIVE_TRANSLATE_ECHO", "false").lower() == "true"
+    gemini_live_translate_modalities: str = os.getenv("GEMINI_LIVE_TRANSLATE_MODALITIES", "AUDIO")
+
+    # Generic LLM generation parameters — applicable across streaming providers
+    google_api_key: str = os.getenv("GOOGLE_API_KEY", "")
     temperature: float = float(os.getenv("AI_TEMPERATURE", "0.1"))
     top_p: float = float(os.getenv("AI_TOP_P", "0.9"))

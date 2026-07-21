@@ -80,7 +80,9 @@ export function useLiveKit() {
       // 2. Validate known packet types
       const knownTypes = [
         'AIStartedEvent', 'AIPartialEvent', 'AICompletedEvent', 
-        'TranslationFailedEvent', 'AIErrorEvent', 'TelemetryUpdate'
+        'TranslationFailedEvent', 'AIErrorEvent', 'TelemetryUpdate',
+        'StreamingPartialTranslationEvent', 'StreamingTranslationAudioEvent',
+        'StreamingTranslationCompletedEvent', 'StreamingRuntimeErrorEvent'
       ];
       if (!knownTypes.includes(type)) {
         console.warn(`Packet Validation Failure: Unknown packet type "${type}". Discarding.`);

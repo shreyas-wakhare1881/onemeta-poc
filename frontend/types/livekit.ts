@@ -136,11 +136,58 @@ export interface TelemetryUpdatePacket extends BasePacket {
   payload: TelemetryUpdatePayload;
 }
 
+export interface StreamingPartialTranslationPacket extends BasePacket {
+  type: 'StreamingPartialTranslationEvent';
+  payload: {
+    session_id: string;
+    event_seq: number;
+    text_delta: string;
+    cumulative_text: string;
+    correlation_id: string;
+  };
+}
+
+export interface StreamingTranslationAudioPacket extends BasePacket {
+  type: 'StreamingTranslationAudioEvent';
+  payload: {
+    session_id: string;
+    event_seq: number;
+    audio_data: string;
+    mime_type: string;
+    correlation_id: string;
+  };
+}
+
+export interface StreamingTranslationCompletedPacket extends BasePacket {
+  type: 'StreamingTranslationCompletedEvent';
+  payload: {
+    session_id: string;
+    event_seq: number;
+    full_text: string;
+    correlation_id: string;
+  };
+}
+
+export interface StreamingRuntimeErrorPacket extends BasePacket {
+  type: 'StreamingRuntimeErrorEvent';
+  payload: {
+    session_id: string;
+    event_seq: number;
+    error_message: string;
+    correlation_id: string;
+  };
+}
+
 export type LiveKitAIEventPacket = 
   | AIStartedPacket 
   | AIPartialPacket 
   | AICompletedPacket 
-  | TranslationFailedPacket;
+  | TranslationFailedPacket
+  | StreamingPartialTranslationPacket
+  | StreamingTranslationAudioPacket
+  | StreamingTranslationCompletedPacket
+  | StreamingRuntimeErrorPacket;
+
 
 export type LiveKitPacket = 
   | LiveKitAIEventPacket

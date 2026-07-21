@@ -1,18 +1,30 @@
-from .base import BaseRuntime
-from .transformers_runtime import TransformersGemmaRuntime
-from .ollama_runtime import OllamaGemmaRuntime
+from typing import Any
+from ..streaming import BaseStreamingRuntime
+from .gemini_live_runtime import GeminiLiveRuntime
+from .gemini_live_translate_runtime import GeminiLiveTranslateRuntime
 
-# Registry mapping runtime type string keys to their adapter classes
-RUNTIMES = {
-    "ollama": OllamaGemmaRuntime,
-    "transformers": TransformersGemmaRuntime
+# ---------------------------------------------------------------------------
+# Streaming Runtime Registry
+# ---------------------------------------------------------------------------
+# Maps config key → runtime class. Add new providers here.
+# Chunk runtimes (ollama, transformers, google) removed in Phase 4C.
+# See legacy/chunk_pipeline/ for historical reference.
+# ---------------------------------------------------------------------------
+STREAMING_RUNTIMES = {
+    "gemini_live": GeminiLiveRuntime,
+    "gemini_live_translate": GeminiLiveTranslateRuntime,
+    # future: "gemma_live": GemmaLiveRuntime,
 }
 
-def create_runtime(config) -> BaseRuntime:
+def create_streaming_runtime(config) -> BaseStreamingRuntime:
     """
-    Factory function to instantiate the correct AI inference runtime based on configuration parameters.
+    Factory function to instantiate the configured streaming runtime.
+    Provider-agnostic: callers receive a BaseStreamingRuntime interface.
     """
-    runtime_cls = RUNTIMES.get(config.runtime_type)
-    if not runtime_cls:
-        raise ValueError(f"Unsupported runtime type: {config.runtime_type}")
-    return runtime_cls(config)
+    cls = STREAMING_RUNTIMES.get(config.streaming_runtime)
+    if not cls:
+        raise ValueError(
+            f"Unknown streaming runtime: {config.streaming_runtime!r}. "
+            f"Available: {list(STREAMING_RUNTIMES.keys())}"
+        )
+    return cls(config)

@@ -1,0 +1,134 @@
+{
+  "room": "e2e-test-room",
+  "participant_a": "e2e-participant-alpha",
+  "participant_b": "e2e-participant-beta",
+  "wav_path": "C:\\Users\\ShreyasWakhare\\Desktop\\OneMeta\\onemeta-poc\\samples\\english_sample.wav",
+  "stages": {
+    "participant_a_connected": true,
+    "participant_b_connected": true,
+    "got_audio_event": true,
+    "audio_dom_count": 4
+  },
+  "console_a": [
+    "[info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+    "[error] Warning: Extra attributes from the server: %s%s style \n    at input\n    at div\n    at form\n    at div\n    at div\n    at div\n    at main\n    at Home (webpack-internal:///(app-pages-browser)/./app/page.tsx:34:94)\n    at StaticGenerationSearchParamsBailoutProvider (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/static-generation-searchparams-bailout-provider.js:15:11)\n    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:241:11)\n    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:72:9)\n    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:80:11)\n    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:54:9)\n    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:62:11)\n    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:338:11)\n    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:110:11)\n    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:152:9)\n    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:227:11)\n    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:15:44)\n    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:348:11)\n    at body\n    at html\n    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:72:9)\n    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:80:11)\n    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:54:9)\n    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:62:11)\n    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:32:11)\n    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/internal/ReactDevOverlay.js:66:9)\n    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/hot-reloader-client.js:294:11)\n    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:157:11)\n    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:82:9)\n    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:110:11)\n    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:440:13)\n    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:126:11)\n    at RSCComponent\n    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:142:11)",
+    "[info] connection state changed: disconnected -> connecting {room: , roomID: undefined, participant: , participantID: }",
+    "[info] signal connecting to wss://onemeta-poc-uizvjz8z.livekit.cloud/rtc/v1?access_token=%3Credacted%3E&join_request=CAESyw0fiwgAAAAAAAAK7VvbbuQ2EoUXyCJooAPsPOWx3gO6WSJ1IQf94Ms4CTAZGDuXRd6Wlti2Mq0LJLa7nW9IPmD_diF197TcIp14dxYINnyzD4t1WIdVknwAT7768uTFX4PTgJ7i13_758mLv3x5Evzr15PJF9VioZsXv_x6cj-n00k1J4CJiJI4EBSpiAIehCyBAL5_A99fc8AgPqWn9BSnk3ZOphMzp0CnEzXXG1OomqjlslqTIt_orEOLNs9IqwtVmjyVAP_44W0H3zbVqpbn799cvn4FFBACYMAhhGg6KeZqleUVCHh_eT179_rt7O_vrmdvzz5cXwEiQsRAAIUEkAEiBQyi6SSd785H-9P1J2pMXahadnuqetXOeEIpnQWDpYhBozPLgoBv4yCYdfgApXB98cP7YzTp0LNjFBlcvBmBSMHopa7vqlITfa9LsyUfxgTRKGYfsijMtp4iL2uTF3qO9OWq1Xl5o8psodM5fgqLOnVwhojb5GlXlU2ktCaLmz6raVTZ1lVjSJoerlQirJpS5tosZK0aVbSyMTW5yxq9MbJtm5T0F0aW-l4vB_sCuDOmlrPZer0-XeubxqSnVXM705taN3mhS9PODplm6qYlrS4z0hU2SMOGabpT9EnybJY1amHIXbUsdEOaIlWGHCpY55kmaUr0xuiyzauyJRQHWfmTRWW6lUXed3CrzaqWKjW1atu-pfNMbqXT6X1VLh-6n_NUk9WiUbcy--nHZo_U60yqs9WP33xzbuo3r7-7E-tGqffJuVaX_UXl5a1u6iYvjWzvFAnCCIJQJlReBfIKZcwki-VVJMNIIpfJlaShjANJI5lcyhhlEMpX5zK5kPGFjEIZoDy_kjyW7Eyex_KcyVdcxmfy7JVkQl4lMkr2R6tq04kiTZOnH5f6UysUq82nn5s2_1n7gfQD-ccfSPQD6QfSD-QfZyCDP9dA3ueZtg-kiEDEIBIQApBSQIrAQmARsBhYAkgZIOWANAak3e8CEDkghoAYAWIMiAkwAZwCR-ABcAacAw-BR8Bj4AkgCsCgG3UELp6cdhHBh-tkJujjqRIxNGYzhhP4cC3GsLBGdwXawruibfEstIazyB4d26MTx1kYfBdE3LLAHRti1wYXg3BsQAcDhq4N9oq7y3dssB-JOU7EqTWcoyM8sIc7FOX2cnkIZx9wDNtr5bE92qE9iv7NNMIDe6XdYKyW9UKnYwYBi6XeLHRKKDus9u8IEYOqzVxEBySBuqkW-VKTPJsPIsU2Mjm8higdhgaDBexjcUDEwmHs4SXFoj6UhQckHkayA55sI-MBD4P-lUNU-1AU2jQP27_PdTbHl7VKP2qT_6y6xxwpqkx34C7zdluezXlAKS4GKfnu6GyAxc-job-DJtnRDKsRn6Ea_YgG99WIARZ-hmqOaLaXiBgOsGeKZqsmeywa7kTDg2jsmZrZinnMwum2zQ6KcfyvK1nwxxxBz8EPY8Cf2cmWOo45tlfPD33M9xefZ5t5uE8wpy9NrpvBpPPtbfLDZfLYuhNHO7cXxAdNHdDdnQ307J5stcobss7LrFp3zwl6eGb9xmeqiOC2qm5Jo4ubI_z463WwlKYFLPLmCC1V-tECQb3MH8GJgzJxUyZWymRMmVgpu2erlbNbcJF2axbWDj6m3WPHvCy007LQycpCGykLR5w7aEQZOyhjN2VspYzHlLFDXeZSlz2hLrOryyzqMgevo9Zuwc1rrbaDx7yueoWLVzzBK-y8wsIr7LzoaKduwcmL1obq4BEv2luqe_k4eJ_QGe06o0VntOvMHDIzt8rMKjIba8zsEnO0U_LxH_ODJQslxxHlDhpROoaHu2eHW0eHjyeH2weHO_qIu9uIW7uIj5uI23uIO1qIuzuIWxuIj_uH29uHO9qHj9tnb8w8aWKYarFotZl-dkMGWU_Lbuta9s4AqZpcl6b_QJn-r42b8HlF1Ev1UK0MyfRSPQzSRM9Ls60zrUqjS0PMQz0UJP5Pcpm8yMvbQZbkeVnSalk1pK1VOjzK77a19ndJf3ND93trGq0K8njr075gv7X_0NMZGeWwumr9x6p31byr5l0176p5V827at5V866ad9W8q-ZdNe-qeVfNu2pHuHfVvKvmXTXvqnlX7SlXjU-9q-ZdNe-qeVfNu2reVfOumnfVvKvmXTXvqnlXzbtq3lXzrpp31byr5l0176o9z1XrPzn_PK6aqutlnvZTs_PWLjtz7e3Fu2vY3j_JlFHpnSrL7p-Aba6XVcfo_0W7NjU16Z4KMtz9gVCoDSl026pbTTodZRAFyPl08vXJvwE6_HHfsUYAAA%3D%3D {room: undefined, roomID: undefined, participant: undefined, participantID: undefined, reconnect: undefined}",
+    "[info] signal connected {room: undefined, roomID: undefined, participant: undefined, participantID: undefined}",
+    "[info] connected to Livekit Server edition: 1, version: 1.13.3, protocol: 17, region: India West, nodeId: NM_OMUMBAI1A_eJ5uFMygxNqJ, debugInfo: , agentProtocol: 0 {room: e2e-test-room, roomID: RM_GYAhRTJZHtQB, participant: e2e-participant-alpha, participantID: PA_3aNm5kdTLWCc}",
+    "[info] connection state changed: connecting -> connected {room: e2e-test-room, roomID: RM_GYAhRTJZHtQB, participant: e2e-participant-alpha, participantID: PA_3aNm5kdTLWCc}",
+    "[info] publishing track {room: e2e-test-room, roomID: RM_GYAhRTJZHtQB, participant: e2e-participant-alpha, participantID: PA_3aNm5kdTLWCc, trackID: undefined}",
+    "[info] publishing track {room: e2e-test-room, roomID: RM_GYAhRTJZHtQB, participant: e2e-participant-alpha, participantID: PA_3aNm5kdTLWCc, trackID: undefined}"
+  ],
+  "console_b": [
+    "[info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+    "[error] Warning: Extra attributes from the server: %s%s style \n    at input\n    at div\n    at form\n    at div\n    at div\n    at div\n    at main\n    at Home (webpack-internal:///(app-pages-browser)/./app/page.tsx:34:94)\n    at StaticGenerationSearchParamsBailoutProvider (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/static-generation-searchparams-bailout-provider.js:15:11)\n    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:241:11)\n    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:72:9)\n    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:80:11)\n    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:54:9)\n    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:62:11)\n    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:338:11)\n    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:110:11)\n    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:152:9)\n    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:227:11)\n    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:15:44)\n    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:348:11)\n    at body\n    at html\n    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:72:9)\n    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:80:11)\n    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:54:9)\n    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:62:11)\n    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:32:11)\n    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/internal/ReactDevOverlay.js:66:9)\n    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/hot-reloader-client.js:294:11)\n    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:157:11)\n    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:82:9)\n    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:110:11)\n    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:440:13)\n    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:126:11)\n    at RSCComponent\n    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:142:11)",
+    "[info] connection state changed: disconnected -> connecting {room: , roomID: undefined, participant: , participantID: }",
+    "[info] signal connecting to wss://onemeta-poc-uizvjz8z.livekit.cloud/rtc/v1?access_token=%3Credacted%3E&join_request=CAESzA0fiwgAAAAAAAAK7Vtdb-S2FYUDtAgMTIHuUx7ve0EPr0h9kIt5sMfe7qabrRHvboA-VZY4NrGjD0gczzi_IfkB_beFNOMdeUQ6cbsFgoZv9uHlPbyH90ryAXz8p6-PXvwxOAnoCX7z538evfjq66PgXz8fHf-hWixU8-Knn4_uZnRyXM0IBJEQIYqIRrHgMcOIhhDAm3fw5pIDBvEJPaEnODluZ2RybGYU6OQ4namNKdKapMtltSaF3qi8Q4tW56RVRVoanUmAH7676uCbplrV8uzDu_O3F0ABIQAGHEKIJsfFLF3lugIBH84vp-_fXk2_f385vTr9ePkKEBEiBgIoJIAMEClgEE2Os9nufLQ_XX-ixtRFWstuT1Wv2ilPKKXTYLAUMWhUblkQ8Nc4CKYdPkApXM6_-3CIJh16eogig_m7EYgUjFqq-rYqFVF3qjRb8mFMEI1iHkIWhdnWU-iyNrpQM6QvV63S5XVa5guVzfBzWNSpg1NE3CbPuqpsImU1WVz3WU2Tlm1dNYZk2f5KJcKqKaVWZiHrtEmLVjamJrd5ozZGtm2Tkf7CyFLdqeVgXwC3xtRyOl2v1ydrdd2Y7KRqbqZqU6tGF6o07XSfaZpet6RVZU66wgZp2DBNd4o-ic6neZMuDLmtloVqSFNkqSH7CtY6VyTLiNoYVba6KltCcZCVP1lUrlpZ6L6DW2VWtUwzU6dt27e0zuVWOpXdVeXyvvtZZ4qsFk16I6-mZ68fkHqdy1AFTfE2-Mvf_6G_zWkcv9Z_a5sfkjf9RenyRjV1o0sj29uUBGEE4VzSWOKpjC8ki6U4k2dzOT-V87kUXL6KJUUZXMhzIU8jGQsZCTkPZNDjFOXFqTw7lRjIi3N5HsnzRNJQzs-leCWTMxmKh6NVtelEkabR2ael-twKxWrz-eem1T8qP5B-IH_7A4l-IP1A-oH87Qxk8PsayDudK_tAighEDCIBIQApBaQILAQWAYuBJYCUAVIOSGNA2v0uAJEDYgiIESDGgJgAE8ApcAQeAGfAOfAQeAQ8Bp4AogAMulFH4OLJaRcRfLxMpoI-nioRQ2M2YziBj5diDAtrdFegLbwr2hbPQms4i-zRsT06cZyFwesg4pYF7tgQuza4GIRjAzoYMHRtsFfcXb5jg_1IzHEiTq3hHB3hgT3coSi3l8tDOP2IY9heK4_t0Q7tUfRvphEe2CvtBmO1rBcqGzMIWCzVZqEyQtl-tX9HiBjS2sxEtEcSqJtqoZeK6Hw2iBTbyGT_GqJ0GBoMFrCPxQERC4ex-5cUi_pQFu6ReBjJ9niyjYwHPAz6Vw5J2_uiUKa53_59rvIZvqzT7JMy-se0e8yRospVB-4yb7fpfMYDSnExSMl3R2cDLH4eDf0VNMmOZliN-ALVqEc0-FCNGGDhF6jmgGZ7iYjhAHumaLZq8sei4U403IvGnqmZrZjHLJxu22yvGMf_upIFf8wR9Bx8Pwb8mZ1sqeOQY3v1fN_H_OHidb6ZhQ8JZvSl0aoZTDrf3ibfXyaPrTtxtHN7QXzQ1AHd3dlAz-7JVqe6IWtd5tW6e07Q_TPrFz5TRQQ3VXVDGlVcH-CHX6-DpSwrYKGbA7RMs08WCOqlfgQnDsrETZlYKZMxZWKl7J6tVs5uwUXarVlYO_iQ9gE75GWhnZaFTlYW2khZOOLcQSPK2EEZuyljK2U8powd6jKXuuwJdZldXWZRlzl4HbV2C25ea7UdPOZ11StcvOIJXmHnFRZeYedFRzt1C05etDZUB4940d5S3cvHwfuEzmjXGS06o11n5pCZuVVmVpHZWGNml5ijnZKP_5gfLFkoOY4od9CI0jE83D073Do6fDw53D443NFH3N1G3NpFfNxE3N5D3NFC3N1B3NpAfNw_3N4-3NE-fNw-D8bMkyaGqRaLVpnJFzdkkPW07KauZe8MkKrRqjT9B8rkf23chM8rol6m99XKkFwt0_tBmuh5abZ1ZlVpVGmIua-HgsT_SS6jC13eDLIkz8uSVcuqIW2dZsOj_Gpb6-Eu6S9u6H5vTaPSgjze-rQv2G_tP_RUTkY5rK5a_7HqXTXvqnlXzbtq3lXzrpp31byr5l0176p5V827at5V867aAe5dNe-qeVfNu2reVXvKVeMT76p5V827at5V866ad9W8q-ZdNe-qeVfNu2reVfOumnfVvKvmXTXvqnlXzbtqz3PV-k_O34-rltb1Umf91Oy8tfPOXLuav7-E7f2TPDVpdpuWZfdPwDbXy6pj9P-iXZuZmnRPBRnu_kAo0g0pVNumN4p0OsogCpDzyfE3R_8GXr9VxbFGAAA%3D {room: undefined, roomID: undefined, participant: undefined, participantID: undefined, reconnect: undefined}",
+    "[info] signal connected {room: undefined, roomID: undefined, participant: undefined, participantID: undefined}",
+    "[info] connected to Livekit Server edition: 1, version: 1.13.3, protocol: 17, region: India West, nodeId: NM_OMUMBAI1A_eJ5uFMygxNqJ, debugInfo: , agentProtocol: 0 {room: e2e-test-room, roomID: RM_GYAhRTJZHtQB, participant: e2e-participant-beta, participantID: PA_2HUXLqT5z2C5}",
+    "[info] connection state changed: connecting -> connected {room: e2e-test-room, roomID: RM_GYAhRTJZHtQB, participant: e2e-participant-beta, participantID: PA_2HUXLqT5z2C5}",
+    "[info] publishing track {room: e2e-test-room, roomID: RM_GYAhRTJZHtQB, participant: e2e-participant-beta, participantID: PA_2HUXLqT5z2C5, trackID: undefined}",
+    "[info] publishing track {room: e2e-test-room, roomID: RM_GYAhRTJZHtQB, participant: e2e-participant-beta, participantID: PA_2HUXLqT5z2C5, trackID: undefined}"
+  ],
+  "network_responses": [
+    {
+      "participant": "A",
+      "url": "http://localhost:8000/health",
+      "status": 200,
+      "time": 1784645812.1215758
+    },
+    {
+      "participant": "A",
+      "url": "http://localhost:8000/health",
+      "status": 200,
+      "time": 1784645812.1255739
+    },
+    {
+      "participant": "A",
+      "url": "http://localhost:8000/api/livekit/token",
+      "status": 200,
+      "time": 1784645812.727386
+    },
+    {
+      "participant": "A",
+      "url": "http://localhost:8000/health",
+      "status": 200,
+      "time": 1784645817.584449
+    },
+    {
+      "participant": "A",
+      "url": "http://127.0.0.1:8000/api/audio/agent/start",
+      "status": 200,
+      "time": 1784645821.3923137
+    },
+    {
+      "participant": "A",
+      "url": "http://localhost:8000/health",
+      "status": 200,
+      "time": 1784645821.856814
+    },
+    {
+      "participant": "A",
+      "url": "http://localhost:8000/health",
+      "status": 200,
+      "time": 1784645828.1115558
+    },
+    {
+      "participant": "A",
+      "url": "http://localhost:8000/health",
+      "status": 200,
+      "time": 1784645832.8120325
+    },
+    {
+      "participant": "B",
+      "url": "http://localhost:8000/health",
+      "status": 200,
+      "time": 1784645833.5512474
+    },
+    {
+      "participant": "B",
+      "url": "http://localhost:8000/health",
+      "status": 200,
+      "time": 1784645834.7767024
+    },
+    {
+      "participant": "B",
+      "url": "http://localhost:8000/api/livekit/token",
+      "status": 200,
+      "time": 1784645836.1522887
+    },
+    {
+      "participant": "B",
+      "url": "http://localhost:8000/health",
+      "status": 200,
+      "time": 1784645837.6928248
+    },
+    {
+      "participant": "A",
+      "url": "http://localhost:8000/health",
+      "status": 200,
+      "time": 1784645838.4284875
+    },
+    {
+      "participant": "B",
+      "url": "http://127.0.0.1:8000/api/audio/agent/start",
+      "status": 200,
+      "time": 1784645839.47809
+    }
+  ],
+  "criteria": {
+    "backend_healthy": true,
+    "frontend_reachable": true,
+    "participant_a_connected": true,
+    "participant_b_connected": true,
+    "translation_text_received": true,
+    "translation_text_non_empty": true,
+    "audio_event_received": true
+  },
+  "translation_text": "Hola a todos. Mi nombre es hoy estamos probando el backend de procesamiento de voz. Esto es una grabaci\u00f3n que se usa para validar el procesamiento de voz y audio. Y en la etapa dos de infraestructura de IA. El audio se convierte en fragmentos de voz y luego se env\u00eda al este Y todos, mi Y mi nombre esPero no s\u00e9 si",
+  "dev_logs_b": [
+    "[14:57:19.807] Streaming Spanish Transcript: \"Pero no s\u00e9 si\""
+  ],
+  "success": true
+}

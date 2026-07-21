@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useLiveKit } from '../hooks/useLiveKit';
 import { ttsService } from '../services/tts.service';
+import { pcmPlayer } from '../services/pcmPlayer.service';
 
 // Subcomponent imports
 import TranscriptCard from '../components/TranscriptCard';
@@ -139,6 +140,23 @@ export default function Home() {
       }
     }
   }, [isSpeechRecognitionActive, addLog]);
+
+  // Register pcmPlayer callbacks
+  useEffect(() => {
+    pcmPlayer.onPlaybackStart = () => {
+      setPlaybackState('playing');
+      setPipelineState('Playing Audio');
+      addLog('Audio Playback Started (Gemini Stream)');
+    };
+    pcmPlayer.onPlaybackEnd = () => {
+      setPlaybackState('idle');
+      setPipelineState('Completed');
+      addLog('Audio Playback Completed (Gemini Stream)');
+    };
+    return () => {
+      pcmPlayer.stop();
+    };
+  }, [addLog]);
 
   // Sync speech recognition lifecycle with LiveKit room state
   useEffect(() => {
@@ -306,6 +324,44 @@ export default function Home() {
         })
       );
     }
+    
+    else if (event.type === 'StreamingPartialTranslationEvent') {
+      setPipelineState('Translating');
+      const textDelta = event.payload.text_delta || '';
+      const cumulativeText = event.payload.cumulative_text || '';
+      
+      if (cumulativeText) {
+        setSpanishTranslation(cumulativeText);
+      } else if (textDelta) {
+        setSpanishTranslation((prev) => (prev + ' ' + textDelta).trim());
+      }
+      
+      addLog(`Streaming Spanish Transcript: "${textDelta}"`);
+    }
+    
+    else if (event.type === 'StreamingTranslationAudioEvent') {
+      const audioData = event.payload.audio_data || '';
+      if (audioData) {
+        addLog(`StreamingTranslationAudioEvent received (${audioData.length} chars)`);
+        pcmPlayer.playChunk(audioData);
+      }
+    }
+    
+    else if (event.type === 'StreamingTranslationCompletedEvent') {
+      setPipelineState('Completed');
+      const fullText = event.payload.full_text || '';
+      if (fullText) {
+        setSpanishTranslation(fullText);
+      }
+      addLog(`Translation Event Completed.`);
+    }
+    
+    else if (event.type === 'StreamingRuntimeErrorEvent') {
+      setPipelineState('Error');
+      const errMsg = event.payload.error_message || 'Runtime streaming error';
+      setErrorMessage(errMsg);
+      addLog(`Gemini Streaming Error: ${errMsg}`);
+    }
   }, [aiEvents, chunkHistory, addLog]);
 
   // Auto-scroll scrollable areas
@@ -344,6 +400,7 @@ export default function Home() {
     setPipelineState('Idle');
     setPlaybackState('idle');
     ttsService.stop();
+    pcmPlayer.stop();
     await disconnect();
   };
 

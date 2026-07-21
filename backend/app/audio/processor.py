@@ -1,17 +1,19 @@
 from abc import ABC, abstractmethod
+import asyncio
 import logging
 import time
-from typing import List
+import uuid
+from typing import List, Callable, Any
+
 from ..types.audio import AudioFrame
-from ..types.speech import FlushReason
+from ..transport.packet import StreamingAudioPacket, StreamingPacketMetadata
 from .config import AudioConfig
 from .vad import StreamingVADProcessor
-from .chunk_builder import AdaptiveChunkBuilder
-from .context_manager import StreamingContextManager
-from .sink import BaseSpeechChunkSink
 from .telemetry import AudioTelemetry
+from ..ai.events import StreamingSpeechStartedEvent, StreamingSpeechEndedEvent
 
 logger = logging.getLogger("onemeta.processor")
+
 
 class BaseAudioProcessor(ABC):
     """
@@ -48,7 +50,6 @@ class DefaultAudioProcessor(BaseAudioProcessor):
     async def process_frame(self, frame: AudioFrame) -> None:
         if not self._initialized:
             raise RuntimeError("DefaultAudioProcessor must be initialized.")
-        pass
 
     async def flush(self) -> None:
         pass
@@ -60,107 +61,138 @@ class DefaultAudioProcessor(BaseAudioProcessor):
 
 class StreamingSpeechProcessor(BaseAudioProcessor):
     """
-    Orchestrates the core DSP pipeline chain:
-    AudioFrame -> VAD -> ChunkBuilder -> ContextManager -> SpeechChunkSink.
-    
-    Dynamically tracks frame RMS values processed during the active chunk
-    to compute chunk telemetry statistics without double-calculating arrays.
+    Orchestrates the streaming audio pipeline:
+      AudioFrame → VAD → StreamingAudioPacket → registered packet listeners
+
+    Emits VAD control-plane events (StreamingSpeechStartedEvent,
+    StreamingSpeechEndedEvent) to registered event listeners so the
+    streaming session can signal turn completion to the runtime.
+
+    Chunk assembly has been removed in Phase 4C. See legacy/chunk_pipeline/ for historical reference.
     """
-    def __init__(self, config: AudioConfig, room_name: str, sink: BaseSpeechChunkSink, telemetry: AudioTelemetry):
+    def __init__(self, config: AudioConfig, room_name: str, telemetry: AudioTelemetry):
         self.config = config
         self.room_name = room_name
-        self.sink = sink
         self.telemetry = telemetry
-        
+
         self.vad = StreamingVADProcessor(config)
-        self.builder = AdaptiveChunkBuilder(config)
-        self.context_manager = StreamingContextManager(room_name, config)
-        self._rms_values: List[float] = []
         self._initialized = False
+
+        # Packet listeners receive each StreamingAudioPacket (Stage 1 → Stage 2)
+        self._packet_listeners: List[Callable[[StreamingAudioPacket], Any]] = []
+
+        # VAD control-plane tracking
+        self._speech_active = False
+        self._current_correlation_id = ""
+        self._event_listeners: List[Callable[[Any], Any]] = []
+
+    # ------------------------------------------------------------------
+    # Listener registration
+    # ------------------------------------------------------------------
+
+    def register_packet_listener(self, listener: Callable[[StreamingAudioPacket], Any]) -> None:
+        if listener not in self._packet_listeners:
+            self._packet_listeners.append(listener)
+
+    def unregister_packet_listener(self, listener: Callable[[StreamingAudioPacket], Any]) -> None:
+        if listener in self._packet_listeners:
+            self._packet_listeners.remove(listener)
+
+    def register_listener(self, listener: Callable[[Any], Any]) -> None:
+        if listener not in self._event_listeners:
+            self._event_listeners.append(listener)
+
+    def unregister_listener(self, listener: Callable[[Any], Any]) -> None:
+        if listener in self._event_listeners:
+            self._event_listeners.remove(listener)
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
 
     async def initialize(self) -> None:
         self._initialized = True
-        
-        # Propagate start signal to downstream sinks (e.g. QueuedChunkSink consumer tasks)
-        if hasattr(self.sink, "start"):
-            await self.sink.start()
-            
         logger.info(f"StreamingSpeechProcessor initialized for room: {self.room_name}")
 
     async def process_frame(self, frame: AudioFrame) -> None:
         if not self._initialized:
             raise RuntimeError("StreamingSpeechProcessor must be initialized before processing.")
 
-        t_start_ns = time.perf_counter_ns()
-
-        # 1. Voice Activity Detection (float32 RMS energy calculation with dual-threshold hysteresis VAD)
+        # 1. Voice Activity Detection
         is_speech, rms = self.vad.is_speech(frame)
 
-        # Track RMS for active speech frames to compile chunk stats on flush
-        if is_speech:
-            self._rms_values.append(rms)
-
-        # 2. Accumulate in AdaptiveChunkBuilder (deque buffers, silence frames isolated)
-        flush_result = self.builder.add_frame(frame, is_speech)
-
-        # 3. If a flush occurred, compile chunk and deliver to MultiSink
-        if flush_result:
-            frames, reason, silence_count = flush_result
-            
-            # Calculate RMS metrics
-            average_rms = sum(self._rms_values) / len(self._rms_values) if self._rms_values else 0.0
-            peak_rms = max(self._rms_values) if self._rms_values else 0.0
-            self._rms_values.clear()
-
-            # Telemetry generates strongly-typed metadata (Separation of Concerns)
-            metadata = self.telemetry.create_chunk_metadata(
-                frames_iterable=frames, 
-                reason=reason, 
-                t_start_ns=t_start_ns,
-                silence_count=silence_count,
-                average_rms=average_rms,
-                peak_rms=peak_rms
+        # 2. VAD control-plane: emit speech start / end events
+        if is_speech and not self._speech_active:
+            self._speech_active = True
+            self._current_correlation_id = f"corr-{uuid.uuid4().hex[:8]}"
+            ev = StreamingSpeechStartedEvent(
+                session_id=self.room_name,
+                event_seq=0,
+                wall_timestamp=time.time(),
+                session_time_ms=0.0,
+                correlation_id=self._current_correlation_id
             )
-            # Pure context manager transforms frames list into SpeechChunk
-            chunk = self.context_manager.build_chunk(frames, metadata)
-            await self.sink.write_chunk(chunk)
+            await self._emit_event(ev)
+
+        elif not is_speech and self._speech_active:
+            self._speech_active = False
+            ev = StreamingSpeechEndedEvent(
+                session_id=self.room_name,
+                event_seq=0,
+                wall_timestamp=time.time(),
+                session_time_ms=0.0,
+                correlation_id=self._current_correlation_id
+            )
+            await self._emit_event(ev)
+
+        # 3. Build and broadcast StreamingAudioPacket to all listeners (Stage 1 → Stage 2)
+        if self._packet_listeners:
+            packet_metadata = StreamingPacketMetadata(
+                frame_id=frame.frame_id,
+                participant_identity=frame.participant_identity,
+                participant_session_id=frame.participant_session_id,
+                rms=rms,
+                correlation_id=self._current_correlation_id if self._speech_active else ""
+            )
+            packet = StreamingAudioPacket(
+                pcm_data=memoryview(frame.pcm_data),
+                sample_rate=frame.sample_rate,
+                channels=frame.channels,
+                capture_timestamp_ns=frame.capture_timestamp_ns,
+                sequence_number=frame.sequence_number,
+                is_speech=is_speech,
+                metadata=packet_metadata
+            )
+            for listener in self._packet_listeners:
+                try:
+                    if asyncio.iscoroutinefunction(listener):
+                        await listener(packet)
+                    else:
+                        listener(packet)
+                except Exception as e:
+                    logger.error(f"Error in streaming packet listener: {e}", exc_info=True)
 
     async def flush(self) -> None:
-        """
-        Forces flushing of any buffered speech frames.
-        """
-        if not self._initialized:
-            return
-
-        t_start_ns = time.perf_counter_ns()
-        flush_result = self.builder.flush(FlushReason.END_OF_STREAM)
-        if flush_result:
-            frames, reason, silence_count = flush_result
-            
-            # Calculate RMS metrics
-            average_rms = sum(self._rms_values) / len(self._rms_values) if self._rms_values else 0.0
-            peak_rms = max(self._rms_values) if self._rms_values else 0.0
-            self._rms_values.clear()
-
-            metadata = self.telemetry.create_chunk_metadata(
-                frames_iterable=frames, 
-                reason=reason, 
-                t_start_ns=t_start_ns,
-                silence_count=silence_count,
-                average_rms=average_rms,
-                peak_rms=peak_rms
-            )
-            chunk = self.context_manager.build_chunk(frames, metadata)
-            await self.sink.write_chunk(chunk)
+        """No-op in streaming mode — no buffered chunk state to flush."""
+        pass
 
     async def shutdown(self) -> None:
         """
-        Flushes buffers and safely shuts down downstream sink processes.
+        Gracefully shuts down the processor.
         """
-        await self.flush()
-        
-        if hasattr(self.sink, "shutdown"):
-            await self.sink.shutdown()
-            
         self._initialized = False
         logger.info(f"StreamingSpeechProcessor shut down cleanly for room: {self.room_name}")
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    async def _emit_event(self, event: Any) -> None:
+        for listener in self._event_listeners:
+            try:
+                if asyncio.iscoroutinefunction(listener):
+                    asyncio.create_task(listener(event))
+                else:
+                    listener(event)
+            except Exception as e:
+                logger.error(f"Error in VAD event listener: {e}")
