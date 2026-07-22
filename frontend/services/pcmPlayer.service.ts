@@ -1,3 +1,6 @@
+import { tracer } from './trace.service';
+import { PipelineEvent } from '../types/trace';
+
 export class PCMStreamPlayer {
   private audioCtx: AudioContext | null = null;
   private nextPlayTime = 0;
@@ -27,8 +30,11 @@ export class PCMStreamPlayer {
     }
   }
 
-  public playChunk(base64Data: string) {
+  public playChunk(base64Data: string, correlationId: string = '') {
     this.playChunkCalledCount++;
+    if (tracer.isEnabled()) {
+      tracer.logEvent(PipelineEvent.PCM_DECODE_STARTED, correlationId, { packet_size: base64Data.length });
+    }
     try {
       this.initAudioContext();
       if (!this.audioCtx) return;
@@ -54,6 +60,14 @@ export class PCMStreamPlayer {
       const audioBuffer = this.audioCtx.createBuffer(1, float32Array.length, 24000);
       audioBuffer.getChannelData(0).set(float32Array);
 
+      if (tracer.isEnabled()) {
+        tracer.logEvent(PipelineEvent.PCM_DECODE_COMPLETED, correlationId, {
+          sample_rate: 24000,
+          channels: 1,
+          duration_sec: audioBuffer.duration
+        });
+      }
+
       // 4. Create source node
       const sourceNode = this.audioCtx.createBufferSource();
       sourceNode.buffer = audioBuffer;
@@ -65,8 +79,36 @@ export class PCMStreamPlayer {
         this.nextPlayTime = currentTime;
       }
 
+      const playDelaySec = this.nextPlayTime - currentTime;
+      const scheduledTime = this.nextPlayTime;
+
       // Schedule play
-      sourceNode.start(this.nextPlayTime);
+      sourceNode.start(scheduledTime);
+
+      if (tracer.isEnabled()) {
+        const currentMonoNs = performance.now() * 1_000_000;
+        const playMonoNs = Math.round(currentMonoNs + playDelaySec * 1_000_000_000);
+        const playEpochMs = Date.now() + playDelaySec * 1000;
+
+        tracer.logEvent(PipelineEvent.AUDIO_SCHEDULED, correlationId, {
+          scheduled_time_sec: scheduledTime,
+          delay_sec: playDelaySec
+        });
+
+        // Record the scheduled playback timestamp based on the Web Audio scheduling timeline.
+        // Clearly distinguish scheduled playback time from actual callback-based playback detection.
+        tracer.logEvent(
+          PipelineEvent.AUDIO_PLAYBACK_SCHEDULED,
+          correlationId,
+          {
+            scheduled_time_sec: scheduledTime,
+            description: "Scheduled playback timestamp based on Web Audio scheduling timeline"
+          },
+          playEpochMs,
+          playMonoNs
+        );
+      }
+
       this.nextPlayTime += audioBuffer.duration;
       this.playChunkScheduledCount++;
 

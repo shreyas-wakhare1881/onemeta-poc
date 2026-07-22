@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useLiveKit } from '../hooks/useLiveKit';
 import { pcmPlayer } from '../services/pcmPlayer.service';
+import { tracer } from '../services/trace.service';
+import { PipelineEvent } from '../types/trace';
 
 // Subcomponent imports
 import TranscriptCard from '../components/TranscriptCard';
@@ -21,6 +23,11 @@ export default function Home() {
 
   // Audio / translation text state slices
   const [englishTranscript, setEnglishTranscript] = useState<string>('');
+  const [useGeminiAsr, setUseGeminiAsr] = useState<boolean>(false);
+  const useGeminiAsrRef = useRef<boolean>(false);
+  useEffect(() => {
+    useGeminiAsrRef.current = useGeminiAsr;
+  }, [useGeminiAsr]);
   const [spanishTranslation, setSpanishTranslation] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -93,6 +100,9 @@ export default function Home() {
         rec.lang = 'en-US';
 
         rec.onresult = (event: any) => {
+          if (useGeminiAsrRef.current) {
+            return;
+          }
           let interimTranscript = '';
           let newlyFinalized = '';
 
@@ -108,11 +118,14 @@ export default function Home() {
           if (newlyFinalized) {
             setEnglishTranscript((prev) => {
               const base = prev.split(' ').slice(-30).join(' '); // Limit memory buffer size
-              return (base + ' ' + newlyFinalized).trim();
+              const next = (base + ' ' + newlyFinalized).trim();
+              console.log(`[ENGLISH UPDATE] Source: Browser (Finalized) | Delta: "${newlyFinalized}" | New Value: "${next}"`);
+              return next;
             });
             setEnglishInterim('');
             addLog(`ASR Preview Input (Finalized): "${newlyFinalized}"`);
           } else if (interimTranscript) {
+            console.log(`[ENGLISH UPDATE] Source: Browser (Interim) | Delta: "${interimTranscript}"`);
             setEnglishInterim(interimTranscript);
           }
         };
@@ -156,6 +169,7 @@ export default function Home() {
     if (status === 'Connected') {
       setIsSpeechRecognitionActive(true);
       setEnglishTranscript('');
+      setUseGeminiAsr(false);
       setEnglishInterim('');
       setSpanishTranslation('');
       totalAudioEventsPlayedRef.current = 0;
@@ -225,11 +239,18 @@ export default function Home() {
       else if (event.type === 'StreamingPartialTranslationEvent') {
         const textDelta = event.payload.text_delta || '';
         const cumulativeText = event.payload.cumulative_text || '';
+        const correlationId = event.payload.correlation_id || '';
         
         if (cumulativeText) {
           setSpanishTranslation(cumulativeText);
         } else if (textDelta) {
           setSpanishTranslation((prev) => (prev + ' ' + textDelta).trim());
+        }
+
+        if (tracer.isEnabled()) {
+          requestAnimationFrame(() => {
+            tracer.logEvent(PipelineEvent.REACT_RENDER_COMPLETED, correlationId, { text_delta: textDelta });
+          });
         }
         
         addLog(`Streaming Spanish Transcript: "${textDelta}"`);
@@ -244,7 +265,8 @@ export default function Home() {
         // Only play the translated audio if it was NOT originally spoken by the local participant, or if loopback is enabled.
         if (audioData && (hearOwnTranslation || participantIdentity !== identityInput)) {
           addLog(`StreamingTranslationAudioEvent received (${audioData.length} chars) from speaker ${participantIdentity}`);
-          pcmPlayer.playChunk(audioData);
+          const correlationId = event.payload.correlation_id || '';
+          pcmPlayer.playChunk(audioData, correlationId);
         } else if (audioData) {
           addLog(`Echo Cancellation: Ignored playing our own translation audio.`);
         }
@@ -262,6 +284,41 @@ export default function Home() {
         const errMsg = event.payload.error_message || 'Runtime streaming error';
         setErrorMessage(errMsg);
         addLog(`Gemini Streaming Error: ${errMsg}`);
+      }
+      
+      else if (event.type === 'StreamingInputTranscriptionEvent') {
+        const textDelta = event.payload.text_delta || '';
+        const cumulativeText = event.payload.cumulative_text || '';
+        
+        setUseGeminiAsr((prev) => {
+          if (!prev) {
+            console.log(`[ENGLISH ASR SWITCH] Switching to Gemini ASR. Clearing Web Speech preview buffers.`);
+            setEnglishTranscript('');
+            setEnglishInterim('');
+          }
+          return true;
+        });
+
+        if (cumulativeText) {
+          console.log(`[ENGLISH UPDATE] Source: Gemini (Cumulative) | Value: "${cumulativeText}"`);
+          setEnglishTranscript(cumulativeText);
+        } else if (textDelta) {
+          setEnglishTranscript((prev) => {
+            const next = (prev + ' ' + textDelta).trim();
+            console.log(`[ENGLISH UPDATE] Source: Gemini (Delta) | Delta: "${textDelta}" | New Value: "${next}"`);
+            return next;
+          });
+        }
+        addLog(`Streaming English Transcript (Gemini): "${textDelta}"`);
+      }
+      
+      else if (event.type === 'StreamingInputTranscriptionCompletedEvent') {
+        const fullText = event.payload.full_text || '';
+        if (fullText) {
+          console.log(`[ENGLISH UPDATE] Source: Gemini (Completed) | Value: "${fullText}"`);
+          setEnglishTranscript(fullText);
+        }
+        addLog(`English Transcription Event Completed.`);
       }
     });
   }, [aiEvents, addLog, identityInput, hearOwnTranslation]);

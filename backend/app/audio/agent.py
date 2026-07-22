@@ -11,6 +11,8 @@ from .config import AudioConfig
 from .processor import StreamingSpeechProcessor
 from .telemetry import AudioTelemetry
 from .registry import pipeline_registry
+from .tracing_events import PipelineEvent
+from .tracer import PipelineEventTracer
 
 logger = logging.getLogger("onemeta.audio_agent")
 
@@ -79,9 +81,11 @@ async def stop_all_agents():
 async def _run_agent(room_name: str, loopback: bool = False, source_participant_identity: str = "User-A"):
     logger.info(f"Connecting audio agent to room: {room_name} (loopback={loopback}, source={source_participant_identity})")
 
-    # 1. Initialize config and audio telemetry
+    # 1. Initialize config, audio telemetry and pipeline event tracer
     audio_config = AudioConfig()
     telemetry = AudioTelemetry()
+    tracer = PipelineEventTracer(room_name)
+    tracer.log_event(PipelineEvent.SESSION_STARTED)
 
     # Log Audio Configuration details (Suggestion 4)
     logger.info("=== AUDIO CONFIGURATION VERIFICATION ===")
@@ -131,6 +135,16 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
                         break
 
                     try:
+                        parsed_packet = None
+                        corr_id = ""
+                        pkt_type = None
+                        try:
+                            parsed_packet = json.loads(packet_data.decode('utf-8'))
+                            corr_id = parsed_packet.get("payload", {}).get("correlation_id", "")
+                            pkt_type = parsed_packet.get('type')
+                        except Exception:
+                            pass
+
                         if destination_identities:
                             await room.local_participant.publish_data(
                                 packet_data,
@@ -138,6 +152,39 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
                             )
                         else:
                             await room.local_participant.publish_data(packet_data)
+                        
+                        if tracer.enabled and parsed_packet:
+                            import base64
+                            dest_str = ", ".join(destination_identities) if destination_identities else "broadcast"
+                            if pkt_type == 'StreamingPartialTranslationEvent':
+                                tracer.log_event(
+                                    PipelineEvent.TEXT_PUBLISHED,
+                                    correlation_id=corr_id,
+                                    metadata={
+                                        "destination": dest_str,
+                                        "payload_size": len(packet_data)
+                                    }
+                                )
+                            elif pkt_type == 'StreamingTranslationAudioEvent':
+                                try:
+                                    audio_b64 = parsed_packet.get("payload", {}).get("audio_data", "")
+                                    pcm_bytes_len = len(base64.b64decode(audio_b64))
+                                    duration_sec = pcm_bytes_len / 48000.0
+                                except Exception:
+                                    pcm_bytes_len = 0
+                                    duration_sec = 0.0
+
+                                tracer.log_event(
+                                    PipelineEvent.AUDIO_PUBLISHED,
+                                    correlation_id=corr_id,
+                                    metadata={
+                                        "destination": dest_str,
+                                        "frame_size": pcm_bytes_len,
+                                        "sample_rate": 24000,
+                                        "duration": duration_sec
+                                    }
+                                )
+
                         published_packets += 1
                         # Attempt to decode packet type for richer logging
                         try:
@@ -152,6 +199,16 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
                             logger.info(f"Published data packet #{published_packets} type={pkt_type} to LiveKit data channel at {time.time():.4f} (targeted to identities: {destination_identities})")
                         break
                     except Exception as pe:
+                        if tracer.enabled:
+                            tracer.log_event(
+                                PipelineEvent.PIPELINE_ERROR,
+                                correlation_id=corr_id,
+                                metadata={
+                                    "stage": "publish",
+                                    "exception": pe.__class__.__name__,
+                                    "message": str(pe)
+                                }
+                            )
                         if not _is_transient_error(pe):
                             logger.error(f"Non-transient error in packet publishing: {pe}. Dropping packet immediately.")
                             dropped_packets += 1
@@ -190,12 +247,16 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
         StreamingTranslationCompletedEvent,
         StreamingTranslationAudioEvent,
         StreamingRuntimeErrorEvent,
+        StreamingInputTranscriptionEvent,
+        StreamingInputTranscriptionCompletedEvent,
     )
     _PUBLISHABLE_EVENT_TYPES = (
         StreamingPartialTranslationEvent,
         StreamingTranslationCompletedEvent,
         StreamingTranslationAudioEvent,
         StreamingRuntimeErrorEvent,
+        StreamingInputTranscriptionEvent,
+        StreamingInputTranscriptionCompletedEvent,
     )
 
     # Register an event listener to broadcast streaming translation events over LiveKit data channel
@@ -226,7 +287,8 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
                 "payload": {
                     "session_id": c_id,
                     "event_seq": seq,
-                    "participant_identity": getattr(event, "participant_identity", "")
+                    "participant_identity": getattr(event, "participant_identity", ""),
+                    "correlation_id": getattr(event, "correlation_id", "")
                 }
             }
             if hasattr(event, "text_delta"):
@@ -290,12 +352,13 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
         session_id=room_name,
         runtime=live_runtime,
         source_lang=ai_config.default_source_lang,
-        target_lang=ai_config.target_language
+        target_lang=ai_config.target_language,
+        metadata={"tracer": tracer}
     )
     session.register_listener(log_ai_event)
 
     # 4. Build StreamingSpeechProcessor (no chunk sink — audio routes via packet listener)
-    processor = StreamingSpeechProcessor(audio_config, room_name, telemetry)
+    processor = StreamingSpeechProcessor(audio_config, room_name, telemetry, tracer=tracer)
 
     async def forward_audio_packet(packet):
         global _input_packets_sent_count
@@ -349,7 +412,7 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
                 return
 
             logger.info(f"Agent subscribed to remote audio track {track.sid} from participant {participant.identity}")
-            t = asyncio.create_task(_ingest_track(track, pipeline, participant.identity, participant.sid))
+            t = asyncio.create_task(_ingest_track(track, pipeline, participant.identity, participant.sid, tracer))
             active_subscriptions.append(t)
 
     @room.on("track_unsubscribed")
@@ -409,6 +472,13 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
     except Exception as e:
         logger.error(f"Error occurred in audio agent loop for room {room_name}: {e}")
     finally:
+        # Log SESSION_ENDED and save trace file
+        try:
+            tracer.log_event(PipelineEvent.SESSION_ENDED)
+            tracer.save()
+        except Exception as e:
+            logger.error(f"Failed to log/save session trace: {e}")
+
         publisher_task.cancel()
         try:
             await publisher_task
@@ -441,7 +511,7 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
         logger.info(f"Agent connection for room {room_name} cleaned up completely.")
 
 
-async def _ingest_track(track: rtc.Track, pipeline, participant_identity: str, participant_session_id: str):
+async def _ingest_track(track: rtc.Track, pipeline, participant_identity: str, participant_session_id: str, tracer=None):
     """
     Pulls audio frames from rtc.AudioStream and forwards them to Pipeline.ingest_pcm.
     """
@@ -451,6 +521,7 @@ async def _ingest_track(track: rtc.Track, pipeline, participant_identity: str, p
         async for event in audio_stream:
             lk_frame = event.frame
             pcm_bytes = bytes(lk_frame.data)
+
 
             global _audio_frames_received_count
             _audio_frames_received_count += 1

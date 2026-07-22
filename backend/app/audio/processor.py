@@ -70,10 +70,11 @@ class StreamingSpeechProcessor(BaseAudioProcessor):
 
     Chunk assembly has been removed in Phase 4C. See legacy/chunk_pipeline/ for historical reference.
     """
-    def __init__(self, config: AudioConfig, room_name: str, telemetry: AudioTelemetry):
+    def __init__(self, config: AudioConfig, room_name: str, telemetry: AudioTelemetry, tracer: Any = None):
         self.config = config
         self.room_name = room_name
         self.telemetry = telemetry
+        self.tracer = tracer
 
         self.vad = StreamingVADProcessor(config)
         self._initialized = False
@@ -118,59 +119,117 @@ class StreamingSpeechProcessor(BaseAudioProcessor):
         if not self._initialized:
             raise RuntimeError("StreamingSpeechProcessor must be initialized before processing.")
 
-        # 1. Voice Activity Detection
-        is_speech, rms = self.vad.is_speech(frame)
+        try:
+            # 1. Voice Activity Detection
+            is_speech, rms = self.vad.is_speech(frame)
 
-        # 2. VAD control-plane: emit speech start / end events
-        if is_speech and not self._speech_active:
-            self._speech_active = True
-            self._current_correlation_id = f"corr-{uuid.uuid4().hex[:8]}"
-            ev = StreamingSpeechStartedEvent(
-                session_id=self.room_name,
-                event_seq=0,
-                wall_timestamp=time.time(),
-                session_time_ms=0.0,
-                correlation_id=self._current_correlation_id
-            )
-            await self._emit_event(ev)
+            # 2. VAD control-plane: emit speech start / end events
+            vad_triggered = False
+            if is_speech and not self._speech_active:
+                self._speech_active = True
+                self._current_correlation_id = f"corr-{uuid.uuid4().hex[:8]}"
+                vad_triggered = True
+                ev = StreamingSpeechStartedEvent(
+                    session_id=self.room_name,
+                    event_seq=0,
+                    wall_timestamp=time.time(),
+                    session_time_ms=0.0,
+                    correlation_id=self._current_correlation_id
+                )
+                await self._emit_event(ev)
 
-        elif not is_speech and self._speech_active:
-            self._speech_active = False
-            ev = StreamingSpeechEndedEvent(
-                session_id=self.room_name,
-                event_seq=0,
-                wall_timestamp=time.time(),
-                session_time_ms=0.0,
-                correlation_id=self._current_correlation_id
-            )
-            await self._emit_event(ev)
+            elif not is_speech and self._speech_active:
+                self._speech_active = False
+                vad_triggered = True
+                ev = StreamingSpeechEndedEvent(
+                    session_id=self.room_name,
+                    event_seq=0,
+                    wall_timestamp=time.time(),
+                    session_time_ms=0.0,
+                    correlation_id=self._current_correlation_id
+                )
+                await self._emit_event(ev)
 
-        # 3. Build and broadcast StreamingAudioPacket to all listeners (Stage 1 → Stage 2)
-        if self._packet_listeners:
-            packet_metadata = StreamingPacketMetadata(
-                frame_id=frame.frame_id,
-                participant_identity=frame.participant_identity,
-                participant_session_id=frame.participant_session_id,
-                rms=rms,
-                correlation_id=self._current_correlation_id if self._speech_active else ""
-            )
-            packet = StreamingAudioPacket(
-                pcm_data=memoryview(frame.pcm_data),
-                sample_rate=frame.sample_rate,
-                channels=frame.channels,
-                capture_timestamp_ns=frame.capture_timestamp_ns,
-                sequence_number=frame.sequence_number,
-                is_speech=is_speech,
-                metadata=packet_metadata
-            )
-            for listener in self._packet_listeners:
-                try:
-                    if asyncio.iscoroutinefunction(listener):
-                        await listener(packet)
-                    else:
-                        listener(packet)
-                except Exception as e:
-                    logger.error(f"Error in streaming packet listener: {e}", exc_info=True)
+            # Log VAD_DECISION event on transition
+            if vad_triggered and self.tracer and self.tracer.enabled:
+                from .tracing_events import PipelineEvent
+                self.tracer.log_event(
+                    PipelineEvent.VAD_DECISION,
+                    correlation_id=self._current_correlation_id,
+                    metadata={
+                        "is_speech": self._speech_active,
+                        "frame_id": frame.frame_id,
+                        "rms": rms
+                    }
+                )
+
+            # Log MIC_FRAME_RECEIVED event correlating the 20ms block to speech segment
+            if self.tracer and self.tracer.enabled:
+                from .tracing_events import PipelineEvent
+                corr_id = self._current_correlation_id if self._speech_active else ""
+                self.tracer.log_event(
+                    PipelineEvent.MIC_FRAME_RECEIVED,
+                    correlation_id=corr_id,
+                    metadata={
+                        "frame_id": frame.frame_id,
+                        "packet_size": len(frame.pcm_data),
+                        "sample_rate": frame.sample_rate,
+                        "channels": frame.channels,
+                        "is_speech": is_speech
+                    }
+                )
+
+            # 3. Build and broadcast StreamingAudioPacket to all listeners (Stage 1 → Stage 2)
+            if self._packet_listeners:
+                packet_metadata = StreamingPacketMetadata(
+                    frame_id=frame.frame_id,
+                    participant_identity=frame.participant_identity,
+                    participant_session_id=frame.participant_session_id,
+                    rms=rms,
+                    correlation_id=self._current_correlation_id if self._speech_active else ""
+                )
+                packet = StreamingAudioPacket(
+                    pcm_data=memoryview(frame.pcm_data),
+                    sample_rate=frame.sample_rate,
+                    channels=frame.channels,
+                    capture_timestamp_ns=frame.capture_timestamp_ns,
+                    sequence_number=frame.sequence_number,
+                    is_speech=is_speech,
+                    metadata=packet_metadata
+                )
+                for listener in self._packet_listeners:
+                    try:
+                        if asyncio.iscoroutinefunction(listener):
+                            await listener(packet)
+                        else:
+                            listener(packet)
+                    except Exception as le:
+                        logger.error(f"Error in streaming packet listener: {le}", exc_info=True)
+                        if self.tracer and self.tracer.enabled:
+                            from .tracing_events import PipelineEvent
+                            self.tracer.log_event(
+                                PipelineEvent.PIPELINE_ERROR,
+                                correlation_id=self._current_correlation_id if hasattr(self, "_current_correlation_id") else "",
+                                metadata={
+                                    "stage": "vad_packet_broadcast",
+                                    "exception": le.__class__.__name__,
+                                    "message": str(le)
+                                }
+                            )
+        except Exception as e:
+            logger.error(f"Exception during speech processor process_frame: {e}", exc_info=True)
+            if self.tracer and self.tracer.enabled:
+                from .tracing_events import PipelineEvent
+                self.tracer.log_event(
+                    PipelineEvent.PIPELINE_ERROR,
+                    correlation_id=self._current_correlation_id if hasattr(self, "_current_correlation_id") else "",
+                    metadata={
+                        "stage": "vad_processing",
+                        "exception": e.__class__.__name__,
+                        "message": str(e)
+                    }
+                )
+            raise e
 
     async def flush(self) -> None:
         """No-op in streaming mode — no buffered chunk state to flush."""

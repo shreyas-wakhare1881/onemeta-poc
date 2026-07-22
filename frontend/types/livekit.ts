@@ -179,6 +179,27 @@ export interface StreamingRuntimeErrorPacket extends BasePacket {
   };
 }
 
+export interface StreamingInputTranscriptionPacket extends BasePacket {
+  type: 'StreamingInputTranscriptionEvent';
+  payload: {
+    session_id: string;
+    event_seq: number;
+    text_delta: string;
+    cumulative_text: string;
+    correlation_id: string;
+  };
+}
+
+export interface StreamingInputTranscriptionCompletedPacket extends BasePacket {
+  type: 'StreamingInputTranscriptionCompletedEvent';
+  payload: {
+    session_id: string;
+    event_seq: number;
+    full_text: string;
+    correlation_id: string;
+  };
+}
+
 export type LiveKitAIEventPacket = 
   | AIStartedPacket 
   | AIPartialPacket 
@@ -187,7 +208,9 @@ export type LiveKitAIEventPacket =
   | StreamingPartialTranslationPacket
   | StreamingTranslationAudioPacket
   | StreamingTranslationCompletedPacket
-  | StreamingRuntimeErrorPacket;
+  | StreamingRuntimeErrorPacket
+  | StreamingInputTranscriptionPacket
+  | StreamingInputTranscriptionCompletedPacket;
 
 
 export type LiveKitPacket = 
