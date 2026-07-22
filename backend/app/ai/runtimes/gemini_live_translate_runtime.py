@@ -23,14 +23,13 @@ logger = logging.getLogger("onemeta.ai.runtimes.gemini_live_translate")
 
 # Opt-in debug logging for Gemini SDK interactions. Enable by setting env var:
 #   E2E_DEBUG_GEMINI=1
-DEBUG_GEMINI = str(os.environ.get("E2E_DEBUG_GEMINI", "0")).lower() in ("1", "true", "yes")
-if DEBUG_GEMINI:
-    try:
-        DEBUG_LOG_PATH = Path(__file__).resolve().parents[4] / "output" / "gemini_debug.log"
-        DEBUG_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Gemini debug logging enabled -> {DEBUG_LOG_PATH}")
-    except Exception:
-        DEBUG_GEMINI = False
+DEBUG_GEMINI = True
+try:
+    DEBUG_LOG_PATH = Path(__file__).resolve().parents[4] / "output" / "gemini_debug.log"
+    DEBUG_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Gemini debug logging enabled -> {DEBUG_LOG_PATH}")
+except Exception:
+    DEBUG_GEMINI = False
 
 class GeminiLiveTranslateTransport(BaseStreamingTransport):
     """
@@ -57,19 +56,36 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
         self.modalities = modalities
         self.voice_name = voice_name
         self.closed = False
+        import collections
+        self._pending_events = collections.deque()
+        self._last_transcript = ""
+        
+        # Initialize WAV writers for audio verification (WAV Capture)
+        from pathlib import Path
+        output_dir = Path(__file__).resolve().parents[4] / "output"
+        from ...audio.wav_writer import WavWriter
+        self._input_wav = WavWriter(output_dir / f"{session_id}_input.wav", sample_rate=16000, channels=1)
+        self._output_wav = WavWriter(output_dir / f"{session_id}_output.wav", sample_rate=24000, channels=1)
         
         self._current_correlation_id = ""
         self._receive_iterator = self.sdk_session.receive()
+        self._input_packets_sent_count = 0
+        self._received_audio_count = 0
 
     async def send_packet(self, packet: StreamingAudioPacket) -> None:
         if self.closed:
             return
 
-        if packet.metadata and packet.metadata.correlation_id:
+        if packet.metadata:
             self._current_correlation_id = packet.metadata.correlation_id
 
+        self._input_packets_sent_count += 1
         # Convert memoryview to bytes
         pcm_bytes = bytes(packet.pcm_data)
+        self._input_wav.write(pcm_bytes)
+        
+        # Log timestamp of forwarded mic frame to Gemini
+        logger.info(f"EXPERIMENT TIMING: Forwarded Mic Packet #{self._input_packets_sent_count} (corr={self._current_correlation_id}) to Gemini at {time.time():.4f}")
         
         # Optional debug: log outgoing packet metadata and a small prefix of audio
         if DEBUG_GEMINI:
@@ -99,6 +115,10 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
     async def receive_event(self) -> Any:
         if self.closed:
             return None
+
+        # Return queued events first to prevent message drops
+        if self._pending_events:
+            return self._pending_events.popleft()
 
         while not self.closed:
             try:
@@ -135,17 +155,24 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
                         logger.debug("GeminiLiveTranslateTransport: received non-server-content response; continuing")
                         continue
 
+                    events_extracted = []
+
                     # A. Handle output transcription text (Spanish translation deltas)
                     if getattr(content, "output_transcription", None) and getattr(content.output_transcription, "text", None):
-                        return StreamingPartialTranslationEvent(
-                            session_id=self.session_id,
-                            event_seq=0,
-                            wall_timestamp=time.time(),
-                            session_time_ms=0.0,
-                            text_delta=content.output_transcription.text,
-                            cumulative_text="",  # Formatted dynamically by StreamingSession
-                            correlation_id=self._current_correlation_id
-                        )
+                        delta = content.output_transcription.text
+                        if delta:
+                            events_extracted.append(
+                                StreamingPartialTranslationEvent(
+                                    session_id=self.session_id,
+                                    event_seq=0,
+                                    wall_timestamp=time.time(),
+                                    session_time_ms=0.0,
+                                    text_delta=delta,
+                                    cumulative_text="",  # Formatted dynamically by StreamingSession
+                                    correlation_id=self._current_correlation_id
+                                )
+                            )
+                            logger.info(f"GeminiLiveTranslateTransport: Extracted output_transcription delta: {delta!r} (corr={self._current_correlation_id})")
                     
                     # B. Handle model turn parts (which may contain translated audio bytes)
                     if content.model_turn:
@@ -159,51 +186,69 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
                                 
                         # If we received translated audio chunks, emit a StreamingTranslationAudioEvent
                         if audio_data:
-                            return StreamingTranslationAudioEvent(
-                                session_id=self.session_id,
-                                event_seq=0,
-                                wall_timestamp=time.time(),
-                                session_time_ms=0.0,
-                                audio_data=audio_data,
-                                mime_type="audio/pcm",
-                                correlation_id=self._current_correlation_id
+                            self._received_audio_count += 1
+                            self._output_wav.write(audio_data)
+                            logger.info(f"EXPERIMENT TIMING: Received Gemini Audio Chunk #{self._received_audio_count} at {time.time():.4f}")
+                            events_extracted.append(
+                                StreamingTranslationAudioEvent(
+                                    session_id=self.session_id,
+                                    event_seq=0,
+                                    wall_timestamp=time.time(),
+                                    session_time_ms=0.0,
+                                    audio_data=audio_data,
+                                    mime_type="audio/pcm",
+                                    correlation_id=self._current_correlation_id
+                                )
                             )
                             
                         # Fallback for text turn parts
                         if text_delta:
-                            return StreamingPartialTranslationEvent(
+                            events_extracted.append(
+                                StreamingPartialTranslationEvent(
+                                    session_id=self.session_id,
+                                    event_seq=0,
+                                    wall_timestamp=time.time(),
+                                    session_time_ms=0.0,
+                                    text_delta=text_delta,
+                                    cumulative_text="",
+                                    correlation_id=self._current_correlation_id
+                                )
+                            )
+                            logger.info(f"GeminiLiveTranslateTransport: Extracted model_turn text parts: {text_delta!r} (corr={self._current_correlation_id})")
+
+                    # C. Turn complete boundary
+                    if content.turn_complete:
+                        self._last_transcript = ""
+                        events_extracted.append(
+                            StreamingTranslationCompletedEvent(
                                 session_id=self.session_id,
                                 event_seq=0,
                                 wall_timestamp=time.time(),
                                 session_time_ms=0.0,
-                                text_delta=text_delta,
-                                cumulative_text="",
+                                full_text="",
                                 correlation_id=self._current_correlation_id
                             )
-
-                    # C. Turn complete boundary
-                    if content.turn_complete:
-                        return StreamingTranslationCompletedEvent(
-                            session_id=self.session_id,
-                            event_seq=0,
-                            wall_timestamp=time.time(),
-                            session_time_ms=0.0,
-                            full_text="",
-                            correlation_id=self._current_correlation_id
                         )
 
                     # D. Interruption boundary
                     if content.interrupted:
-                        return StreamingTranslationCompletedEvent(
-                            session_id=self.session_id,
-                            event_seq=0,
-                            wall_timestamp=time.time(),
-                            session_time_ms=0.0,
-                            full_text="[Interrupted]",
-                            correlation_id=self._current_correlation_id
+                        self._last_transcript = ""
+                        events_extracted.append(
+                            StreamingTranslationCompletedEvent(
+                                session_id=self.session_id,
+                                event_seq=0,
+                                wall_timestamp=time.time(),
+                                session_time_ms=0.0,
+                                full_text="[Interrupted]",
+                                correlation_id=self._current_correlation_id
+                            )
                         )
-                # If we received a message but it doesn't match our event types (e.g. setupComplete),
-                # we just continue the loop to receive the next message instead of returning None!
+
+                    if events_extracted:
+                        self._pending_events.extend(events_extracted)
+                        return self._pending_events.popleft()
+
+                # If we received a message but it doesn't match our event types, continue
                 logger.debug(f"GeminiLiveTranslateTransport {self.session_id}: Ignored non-translation server message.")
                 continue
 
@@ -237,9 +282,11 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
         return None
 
     async def end_user_turn(self) -> None:
-        # Live Translation operates continuously and does not require explicit turn-ending signals.
-        # However, we still log the call for diagnostics.
-        logger.debug(f"GeminiLiveTranslateTransport {self.session_id}: end_user_turn called (ignored for continuous translation).")
+        if self.closed:
+            return
+        await self.sdk_session.send_realtime_input(audio_stream_end=True)
+        logger.info(f"GeminiLiveTranslateTransport {self.session_id}: Sent audio_stream_end to SDK.")
+
 
     async def cancel_generation(self) -> None:
         if self.closed:
@@ -259,6 +306,11 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
 
     async def close(self) -> None:
         self.closed = True
+        try:
+            self._input_wav.close()
+            self._output_wav.close()
+        except Exception:
+            pass
         try:
             await self.sdk_ctx.__aexit__(None, None, None)
         except Exception as e:
@@ -300,7 +352,12 @@ class GeminiLiveTranslateRuntime(BaseStreamingRuntime):
         if not self._initialized or not self._client:
             await self.initialize()
 
-        modalities_list = [m.strip() for m in self.config.gemini_live_translate_modalities.split(",")]
+        # Normalize modalities and defensively ensure both TEXT and AUDIO are requested.
+        modalities_list = [m.strip().upper() for m in self.config.gemini_live_translate_modalities.split(",") if m.strip()]
+        if 'TEXT' not in modalities_list:
+            modalities_list.append('TEXT')
+        if 'AUDIO' not in modalities_list:
+            modalities_list.append('AUDIO')
         
         # Configure dedicated translation config (auto source detection, target language ES/etc)
         translation_config = types.TranslationConfig(
@@ -308,13 +365,31 @@ class GeminiLiveTranslateRuntime(BaseStreamingRuntime):
             echo_target_language=self.config.gemini_live_translate_echo
         )
         
+        # Log Gemini configuration on startup (Suggestion 6)
+        sdk_version = getattr(genai, "__version__", "unknown")
+        logger.info("=== GEMINI TRANSLATION CONFIGURATION ===")
+        logger.info(f"SDK Version: {sdk_version}")
+        logger.info(f"Model: {self.config.gemini_live_translate_model}")
+        logger.info(f"Target Language Code: {self.config.target_language}")
+        logger.info(f"Echo Target Language: {self.config.gemini_live_translate_echo}")
+        logger.info(f"Response Modalities: {modalities_list}")
+        logger.info(f"Voice Name: {self.config.gemini_live_voice_name}")
+        logger.info("=========================================")
+
         # Build SDK configuration object for live translation model
         # Explicitly set input_audio_transcription to None defensively to prevent SDK defaults
         sdk_config = types.LiveConnectConfig(
             response_modalities=modalities_list,
             translation_config=translation_config,
             input_audio_transcription=None,
-            output_audio_transcription=types.AudioTranscriptionConfig()
+            output_audio_transcription=types.AudioTranscriptionConfig(),
+            speech_config=types.SpeechConfig(
+                voice_config=types.VoiceConfig(
+                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                        voice_name=self.config.gemini_live_voice_name
+                    )
+                )
+            )
         )
         if DEBUG_GEMINI:
             try:

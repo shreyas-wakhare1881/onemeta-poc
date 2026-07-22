@@ -17,6 +17,11 @@ logger = logging.getLogger("onemeta.audio_agent")
 # Holds active agent connection tasks to prevent duplicate agent processes per room
 _active_agents = {}
 
+# Experiment: Global counters for audio packets sent to LiveKit data channel and incoming audio frames
+_audio_packets_sent_count = 0
+_audio_frames_received_count = 0
+_input_packets_sent_count = 0
+
 def _is_transient_error(exc: Exception) -> bool:
     """
     Identify if the exception represents a transient network or transport failure.
@@ -34,7 +39,7 @@ def _is_transient_error(exc: Exception) -> bool:
     return False
 
 
-async def start_audio_agent(room_name: str):
+async def start_audio_agent(room_name: str, loopback: bool = False, source_participant_identity: str = "User-A"):
     """
     Launches an agent background task for a given room if not already running.
     """
@@ -42,9 +47,9 @@ async def start_audio_agent(room_name: str):
         logger.info(f"Audio agent already active or starting for room: {room_name}")
         return
 
-    task = asyncio.create_task(_run_agent(room_name))
+    task = asyncio.create_task(_run_agent(room_name, loopback, source_participant_identity))
     _active_agents[room_name] = task
-    logger.info(f"Dispatched background agent process for room: {room_name}")
+    logger.info(f"Dispatched background agent process for room: {room_name} (loopback={loopback}, source_participant={source_participant_identity})")
 
 
 async def stop_audio_agent(room_name: str):
@@ -71,12 +76,22 @@ async def stop_all_agents():
     await pipeline_registry.shutdown_all()
 
 
-async def _run_agent(room_name: str):
-    logger.info(f"Connecting audio agent to room: {room_name}")
+async def _run_agent(room_name: str, loopback: bool = False, source_participant_identity: str = "User-A"):
+    logger.info(f"Connecting audio agent to room: {room_name} (loopback={loopback}, source={source_participant_identity})")
 
     # 1. Initialize config and audio telemetry
     audio_config = AudioConfig()
     telemetry = AudioTelemetry()
+
+    # Log Audio Configuration details (Suggestion 4)
+    logger.info("=== AUDIO CONFIGURATION VERIFICATION ===")
+    logger.info(f"Sample Rate: {audio_config.sample_rate} Hz")
+    logger.info(f"Channels: {audio_config.channels}")
+    logger.info(f"Bits per Sample: {audio_config.bytes_per_sample * 8} (PCM16)")
+    logger.info(f"Frame Duration: {audio_config.frame_duration_sec * 1000:.1f} ms")
+    logger.info(f"Samples per Frame: {audio_config.samples_per_frame}")
+    logger.info(f"Bytes per Frame: {audio_config.bytes_per_frame} bytes")
+    logger.info("=========================================")
 
     # Bounded publish queue
     PACKET_PROTOCOL_VERSION = 1
@@ -87,6 +102,11 @@ async def _run_agent(room_name: str):
     dropped_packets = 0
     queue_evictions = 0
 
+    global _audio_packets_sent_count, _audio_frames_received_count, _input_packets_sent_count
+    _audio_packets_sent_count = 0
+    _audio_frames_received_count = 0
+    _input_packets_sent_count = 0
+
     room = rtc.Room()
     active_subscriptions = []
 
@@ -94,7 +114,13 @@ async def _run_agent(room_name: str):
         nonlocal published_packets, retried_packets, dropped_packets
         while True:
             try:
-                packet_data = await publish_queue.get()
+                packet_item = await publish_queue.get()
+                if isinstance(packet_item, tuple):
+                    packet_data, destination_identities = packet_item
+                else:
+                    packet_data = packet_item
+                    destination_identities = None
+
                 retries = 3
                 retry_delays = [0.1, 0.2, 0.4]
 
@@ -105,8 +131,25 @@ async def _run_agent(room_name: str):
                         break
 
                     try:
-                        await room.local_participant.publish_data(packet_data)
+                        if destination_identities:
+                            await room.local_participant.publish_data(
+                                packet_data,
+                                destination_identities=destination_identities
+                            )
+                        else:
+                            await room.local_participant.publish_data(packet_data)
                         published_packets += 1
+                        # Attempt to decode packet type for richer logging
+                        try:
+                            parsed_packet = json.loads(packet_data.decode('utf-8'))
+                            pkt_type = parsed_packet.get('type')
+                        except Exception:
+                            pkt_type = None
+
+                        if pkt_type == 'StreamingTranslationAudioEvent' or (isinstance(packet_data, (bytes, bytearray)) and b'"type": "StreamingTranslationAudioEvent"' in packet_data):
+                            logger.info(f"EXPERIMENT TIMING: Successfully published StreamingTranslationAudioEvent packet #{published_packets} to LiveKit data channel at {time.time():.4f} (targeted to identities: {destination_identities})")
+                        else:
+                            logger.info(f"Published data packet #{published_packets} type={pkt_type} to LiveKit data channel at {time.time():.4f} (targeted to identities: {destination_identities})")
                         break
                     except Exception as pe:
                         if not _is_transient_error(pe):
@@ -134,7 +177,7 @@ async def _run_agent(room_name: str):
     # 2. Build streaming AI engine — provider resolved via create_streaming_runtime()
     from ..ai import AIConfig, AIEngine
     from ..ai.runtimes import create_streaming_runtime
-    from ..ai.events import StreamingSpeechStartedEvent, StreamingTranslationAudioEvent
+    from ..ai.events import StreamingSpeechStartedEvent, StreamingSpeechEndedEvent, StreamingTranslationAudioEvent
 
     ai_config = AIConfig()
     ai_engine = AIEngine(ai_config)
@@ -183,6 +226,7 @@ async def _run_agent(room_name: str):
                 "payload": {
                     "session_id": c_id,
                     "event_seq": seq,
+                    "participant_identity": getattr(event, "participant_identity", "")
                 }
             }
             if hasattr(event, "text_delta"):
@@ -198,13 +242,32 @@ async def _run_agent(room_name: str):
                 # and direct WebRTC playback.
                 packet["payload"]["audio_data"] = base64.b64encode(event.audio_data).decode("utf-8")
                 packet["payload"]["mime_type"] = event.mime_type
+                
+                global _audio_packets_sent_count
+                _audio_packets_sent_count += 1
+                logger.info(f"EXPERIMENT METRIC: Total Audio Packets Sent: {_audio_packets_sent_count}")
+                logger.info(f"EXPERIMENT TIMING: Enqueuing StreamingTranslationAudioEvent packet #{_audio_packets_sent_count} at {time.time():.4f}")
             elif hasattr(event, "error_message"):
                 packet["payload"]["error_message"] = event.error_message
+
+            # Resolve destination identities
+            dest_identities = None
+            if room.isconnected:
+                if loopback:
+                    for p in room.remote_participants.values():
+                        if p.identity == source_participant_identity:
+                            dest_identities = [p.identity]
+                            break
+                else:
+                    for p in room.remote_participants.values():
+                        if "User-B" in p.identity:
+                            dest_identities = [p.identity]
+                            break
 
             try:
                 data_bytes = json.dumps(packet).encode("utf-8")
                 try:
-                    publish_queue.put_nowait(data_bytes)
+                    publish_queue.put_nowait((data_bytes, dest_identities))
                 except asyncio.QueueFull:
                     logger.warning("Publisher queue is full! Evicting oldest pending packet.")
                     try:
@@ -213,7 +276,7 @@ async def _run_agent(room_name: str):
                         queue_evictions += 1
                     except asyncio.QueueEmpty:
                         pass
-                    publish_queue.put_nowait(data_bytes)
+                    publish_queue.put_nowait((data_bytes, dest_identities))
             except Exception as pe:
                 logger.error(f"Failed to queue AI event packet: {pe}")
 
@@ -235,11 +298,17 @@ async def _run_agent(room_name: str):
     processor = StreamingSpeechProcessor(audio_config, room_name, telemetry)
 
     async def forward_audio_packet(packet):
+        global _input_packets_sent_count
+        _input_packets_sent_count += 1
+        if _input_packets_sent_count % 50 == 0:
+            logger.info(f"EXPERIMENT METRIC: Total Audio Packets forwarded to AI Engine: {_input_packets_sent_count}")
         await ai_engine.process_audio_packet(room_name, packet)
 
     def forward_vad_event(ev):
         if isinstance(ev, StreamingSpeechStartedEvent):
             session.record_speech_start()
+        elif isinstance(ev, StreamingSpeechEndedEvent):
+            session.record_speech_end()
 
     processor.register_packet_listener(forward_audio_packet)
     processor.register_listener(forward_vad_event)
@@ -266,6 +335,17 @@ async def _run_agent(room_name: str):
             # Ignore agent's own published tracks; subscribe to all remote participant audio.
             if participant.identity == agent_identity:
                 logger.info(f"Agent ignoring local audio track {track.sid} from agent participant {participant.identity}")
+                return
+
+            # Backend Safeguard (Suggestion 3):
+            # Only ingest audio from the primary source participant (User-A or the first speaker)
+            # to prevent acoustic echo loops from the target participant (User-B) or other listeners.
+            if "agent-bot" in participant.identity:
+                return
+
+            # If there's a target participant like User-B, we ignore their track for this session
+            if "User-B" in participant.identity or "Spanish" in participant.identity:
+                logger.info(f"Agent backend safeguard: ignoring audio track from target/non-source participant: {participant.identity}")
                 return
 
             logger.info(f"Agent subscribed to remote audio track {track.sid} from participant {participant.identity}")
@@ -371,6 +451,11 @@ async def _ingest_track(track: rtc.Track, pipeline, participant_identity: str, p
         async for event in audio_stream:
             lk_frame = event.frame
             pcm_bytes = bytes(lk_frame.data)
+
+            global _audio_frames_received_count
+            _audio_frames_received_count += 1
+            if _audio_frames_received_count % 50 == 0:
+                logger.info(f"EXPERIMENT METRIC: Total Mic Frames Ingested from LiveKit: {_audio_frames_received_count}")
 
             pipeline.ingest_pcm(
                 pcm_bytes=pcm_bytes,

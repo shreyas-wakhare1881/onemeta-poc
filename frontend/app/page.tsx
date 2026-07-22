@@ -2,17 +2,11 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useLiveKit } from '../hooks/useLiveKit';
-import { ttsService } from '../services/tts.service';
 import { pcmPlayer } from '../services/pcmPlayer.service';
 
 // Subcomponent imports
 import TranscriptCard from '../components/TranscriptCard';
 import TranslationCard from '../components/TranslationCard';
-import PipelineVisualizer from '../components/PipelineVisualizer';
-import TelemetryDashboard from '../components/TelemetryDashboard';
-import ChunkHistoryList, { ChunkHistoryItem } from '../components/ChunkHistoryList';
-import TimelineVisualizer, { TimelineEvent } from '../components/TimelineVisualizer';
-import LogsConsole from '../components/LogsConsole';
 
 export default function Home() {
   const [backendStatus, setBackendStatus] = useState<string>('Checking...');
@@ -22,8 +16,8 @@ export default function Home() {
   const [roomNameInput, setRoomNameInput] = useState<string>('onemeta-demo');
   const [identityInput, setIdentityInput] = useState<string>('User-A');
 
-  // Developer Mode switch
-  const [developerMode, setDeveloperMode] = useState<boolean>(true);
+  // Experiment: Allow playing translation of own voice (local testing)
+  const [hearOwnTranslation, setHearOwnTranslation] = useState<boolean>(true);
 
   // Audio / translation text state slices
   const [englishTranscript, setEnglishTranscript] = useState<string>('');
@@ -31,38 +25,36 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Pipeline execution state slices
-  const [pipelineState, setPipelineState] = useState<'Idle' | 'Listening' | 'Speech Detected' | 'Chunk Processing' | 'Translating' | 'Playing Audio' | 'Completed' | 'Error'>('Idle');
   const [playbackState, setPlaybackState] = useState<'idle' | 'playing'>('idle');
-  const [chunkHistory, setChunkHistory] = useState<ChunkHistoryItem[]>([]);
-  const [lastTimelineEvents, setLastTimelineEvents] = useState<TimelineEvent[]>([]);
-
-  // Logs buffer for developer mode
-  const [devLogs, setDevLogs] = useState<string[]>([]);
+  const [englishInterim, setEnglishInterim] = useState<string>('');
 
   const englishScrollRef = useRef<HTMLDivElement>(null);
   const spanishScrollRef = useRef<HTMLDivElement>(null);
-  const logsScrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const [isSpeechRecognitionActive, setIsSpeechRecognitionActive] = useState<boolean>(false);
+
+  // Experiment: Audio packets played count ref
+  const totalAudioEventsPlayedRef = useRef(0);
+  const processedEventsCountRef = useRef(0);
 
   const {
     status,
     error,
     isMicrophoneEnabled,
     aiEvents,
-    telemetryData,
     connect,
     disconnect,
     toggleMicrophone,
+    totalAudioEventsReceivedRef,
   } = useLiveKit();
 
   const isConnected = status === 'Connected';
   const isConnecting = status === 'Connecting';
 
-  // Add structured log to buffer helper
+  // Add structured log to console helper
   const addLog = useCallback((message: string) => {
     const timeStr = new Date().toISOString().split('T')[1].slice(0, -1);
-    setDevLogs((prev) => [...prev.slice(-99), `[${timeStr}] ${message}`]);
+    console.log(`[${timeStr}] ${message}`);
   }, []);
 
   // Check Backend health on mount
@@ -102,23 +94,26 @@ export default function Home() {
 
         rec.onresult = (event: any) => {
           let interimTranscript = '';
-          let finalTranscript = '';
+          let newlyFinalized = '';
 
           for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const transcript = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript;
+              newlyFinalized += transcript;
             } else {
-              interimTranscript += event.results[i][0].transcript;
+              interimTranscript += transcript;
             }
           }
 
-          if (finalTranscript || interimTranscript) {
+          if (newlyFinalized) {
             setEnglishTranscript((prev) => {
               const base = prev.split(' ').slice(-30).join(' '); // Limit memory buffer size
-              return (base + ' ' + finalTranscript + interimTranscript).trim();
+              return (base + ' ' + newlyFinalized).trim();
             });
-            setPipelineState('Speech Detected');
-            addLog(`ASR Preview Input: "${finalTranscript || interimTranscript}"`);
+            setEnglishInterim('');
+            addLog(`ASR Preview Input (Finalized): "${newlyFinalized}"`);
+          } else if (interimTranscript) {
+            setEnglishInterim(interimTranscript);
           }
         };
 
@@ -145,12 +140,10 @@ export default function Home() {
   useEffect(() => {
     pcmPlayer.onPlaybackStart = () => {
       setPlaybackState('playing');
-      setPipelineState('Playing Audio');
       addLog('Audio Playback Started (Gemini Stream)');
     };
     pcmPlayer.onPlaybackEnd = () => {
       setPlaybackState('idle');
-      setPipelineState('Completed');
       addLog('Audio Playback Completed (Gemini Stream)');
     };
     return () => {
@@ -161,13 +154,11 @@ export default function Home() {
   // Sync speech recognition lifecycle with LiveKit room state
   useEffect(() => {
     if (status === 'Connected') {
-      setPipelineState('Listening');
       setIsSpeechRecognitionActive(true);
       setEnglishTranscript('');
+      setEnglishInterim('');
       setSpanishTranslation('');
-      setChunkHistory([]);
-      setLastTimelineEvents([]);
-      setDevLogs([]);
+      totalAudioEventsPlayedRef.current = 0;
       addLog('Connection Established. Listening for active speech...');
       if (recognitionRef.current) {
         try {
@@ -183,193 +174,104 @@ export default function Home() {
           recognitionRef.current.stop();
         } catch (e) {}
       }
-      if (status === 'Disconnected') {
-        setPipelineState('Idle');
-      } else if (status === 'Failed') {
-        setPipelineState('Error');
-      }
     }
   }, [status, addLog]);
 
   // Process incoming AI pipeline events delivered from LiveKit Data channel
   useEffect(() => {
-    if (aiEvents.length === 0) return;
+    const totalEvents = aiEvents.length;
+    if (totalEvents === 0) {
+      processedEventsCountRef.current = 0;
+      return;
+    }
 
-    const event = aiEvents[aiEvents.length - 1];
-    const timestamp = event.timestamp || Date.now() / 1000;
+    const previousCount = processedEventsCountRef.current;
+    const newEvents = aiEvents.slice(previousCount);
+    processedEventsCountRef.current = totalEvents;
 
-    if (event.type === 'AIStartedEvent') {
-      setPipelineState('Chunk Processing');
-      addLog(`Chunk Received: ID: ${event.payload.chunk_id} | Sequence: ${event.payload.sequence_number}`);
+    if (newEvents.length === 0) return;
+
+    console.log(`[EFFECT TRIGGERED] Previous=${previousCount}, Current=${totalEvents}, New=${newEvents.length}`);
+    console.table(newEvents.map(e => ({ type: e.type, timestamp: e.timestamp })));
+
+    newEvents.forEach((event) => {
+      if (event.type === 'AIStartedEvent') {
+        addLog(`Chunk Received: ID: ${event.payload.chunk_id} | Sequence: ${event.payload.sequence_number}`);
+      } 
       
-      setChunkHistory((prev) => {
-        const exists = prev.some((c) => c.chunk_id === event.payload.chunk_id);
-        if (exists) return prev;
-        return [
-          ...prev,
-          {
-            chunk_id: event.payload.chunk_id,
-            sequence: event.payload.sequence_number,
-            duration: 0,
-            ttft: 0,
-            latency: 0,
-            status: 'Processing',
-            t_started: timestamp
-          }
-        ];
-      });
-
-      const metrics = event.metrics;
-      const start_t = metrics.start_timestamp || 0;
-      const end_t = metrics.end_timestamp || 0;
-      const chunkDur = Math.round((end_t - start_t) * 1000) || 130;
-
-      setLastTimelineEvents([
-        { label: 'Speech Started', time_ms: 0 },
-        { label: 'Chunk Created', time_ms: chunkDur }
-      ]);
-    } 
-    
-    else if (event.type === 'AIPartialEvent') {
-      setPipelineState('Translating');
-      const textDelta = event.payload.text_delta || '';
+      else if (event.type === 'AIPartialEvent') {
+        const textDelta = event.payload.text_delta || '';
+        if (textDelta) {
+          setSpanishTranslation((prev) => {
+            const words = prev.split(' ').slice(-30).join(' ');
+            return (words + ' ' + textDelta).trim();
+          });
+        }
+      } 
       
-      if (textDelta) {
-        setSpanishTranslation((prev) => {
-          const words = prev.split(' ').slice(-30).join(' ');
-          return (words + ' ' + textDelta).trim();
-        });
+      else if (event.type === 'AICompletedEvent') {
+        const fullText = event.payload.full_text || '';
+        const metrics = event.metrics;
+        const aiLatency = Math.round(metrics.total_ai_latency_ms || event.payload.duration_ms || 0);
+        addLog(`Translation Completed: ID: ${event.payload.chunk_id} | Result: "${fullText}" (Latency: ${aiLatency}ms)`);
+      } 
+      
+      else if (event.type === 'TranslationFailedEvent' || event.type === 'AIErrorEvent') {
+        const errMsg = event.payload.error_message || 'Translation pipeline failure';
+        setErrorMessage(errMsg);
+        addLog(`Error Event: ID: ${event.payload.chunk_id} | ${errMsg}`);
+      }
+      
+      else if (event.type === 'StreamingPartialTranslationEvent') {
+        const textDelta = event.payload.text_delta || '';
+        const cumulativeText = event.payload.cumulative_text || '';
         
-        setChunkHistory((prev) =>
-          prev.map((c) => {
-            if (c.chunk_id === event.payload.chunk_id && c.status === 'Processing') {
-              return { ...c, status: 'Translating' };
-            }
-            return c;
-          })
-        );
-      }
-    } 
-    
-    else if (event.type === 'AICompletedEvent') {
-      setPipelineState('Completed');
-      const fullText = event.payload.full_text || '';
-      const metrics = event.metrics;
-      const chunkDur = Math.round(metrics.chunk_duration_ms || 0);
-      const ttft = Math.round(metrics.ttft_ms || 0);
-      const aiLatency = Math.round(metrics.total_ai_latency_ms || event.payload.duration_ms || 0);
-
-      addLog(`Translation Completed: ID: ${event.payload.chunk_id} | Result: "${fullText}" (Latency: ${aiLatency}ms)`);
-
-      setChunkHistory((prev) =>
-        prev.map((c) => {
-          if (c.chunk_id === event.payload.chunk_id) {
-            return {
-              ...c,
-              duration: chunkDur || 2000,
-              ttft: ttft,
-              latency: aiLatency,
-              status: 'Complete'
-            };
-          }
-          return c;
-        })
-      );
-
-      setLastTimelineEvents([
-        { label: 'Speech Started', time_ms: 0 },
-        { label: 'Chunk Created', time_ms: chunkDur },
-        { label: 'First Token (TTFT)', time_ms: chunkDur + ttft },
-        { label: 'Completed (Total Latency)', time_ms: chunkDur + aiLatency }
-      ]);
-
-      // Play Spanish Translation via TTS Service
-      if (fullText.trim()) {
-        ttsService.speak(
-          fullText,
-          () => {
-            setPlaybackState('playing');
-            setPipelineState('Playing Audio');
-            addLog(`Audio Playback Started: "${fullText}"`);
-            setLastTimelineEvents((prev) => {
-              const clean = prev.filter((p) => p.label !== 'Playback Started');
-              return [...clean, { label: 'Playback Started', time_ms: chunkDur + aiLatency + 15 }];
-            });
-          },
-          () => {
-            setPlaybackState('idle');
-            setPipelineState('Completed');
-            addLog('Audio Playback Finished.');
-            setLastTimelineEvents((prev) => {
-              const clean = prev.filter((p) => p.label !== 'Playback Finished');
-              return [...clean, { label: 'Playback Finished', time_ms: chunkDur + aiLatency + 1200 }];
-            });
-          }
-        );
-      }
-    } 
-    
-    else if (event.type === 'TranslationFailedEvent' || event.type === 'AIErrorEvent') {
-      setPipelineState('Error');
-      const errMsg = event.payload.error_message || 'Translation pipeline failure';
-      setErrorMessage(errMsg);
-      addLog(`Error Event: ID: ${event.payload.chunk_id} | ${errMsg}`);
-      
-      setChunkHistory((prev) =>
-        prev.map((c) => {
-          if (c.chunk_id === event.payload.chunk_id) {
-            return { ...c, status: 'Failed' };
-          }
-          return c;
-        })
-      );
-    }
-    
-    else if (event.type === 'StreamingPartialTranslationEvent') {
-      setPipelineState('Translating');
-      const textDelta = event.payload.text_delta || '';
-      const cumulativeText = event.payload.cumulative_text || '';
-      
-      if (cumulativeText) {
-        setSpanishTranslation(cumulativeText);
-      } else if (textDelta) {
-        setSpanishTranslation((prev) => (prev + ' ' + textDelta).trim());
+        if (cumulativeText) {
+          setSpanishTranslation(cumulativeText);
+        } else if (textDelta) {
+          setSpanishTranslation((prev) => (prev + ' ' + textDelta).trim());
+        }
+        
+        addLog(`Streaming Spanish Transcript: "${textDelta}"`);
       }
       
-      addLog(`Streaming Spanish Transcript: "${textDelta}"`);
-    }
-    
-    else if (event.type === 'StreamingTranslationAudioEvent') {
-      const audioData = event.payload.audio_data || '';
-      if (audioData) {
-        addLog(`StreamingTranslationAudioEvent received (${audioData.length} chars)`);
-        pcmPlayer.playChunk(audioData);
+      else if (event.type === 'StreamingTranslationAudioEvent') {
+        totalAudioEventsPlayedRef.current++;
+        console.log(`[UI PROCESS] Event Index: ${totalAudioEventsPlayedRef.current} | Net Received: ${totalAudioEventsReceivedRef?.current} | PCM playChunk() Called: ${pcmPlayer.playChunkCalledCount} | PCM Scheduled: ${pcmPlayer.playChunkScheduledCount} | PCM Playback Start Events: ${pcmPlayer.playbackStartEventCount} | PCM Playback End Events: ${pcmPlayer.playbackEndEventCount}`);
+        const audioData = event.payload.audio_data || '';
+        const participantIdentity = event.payload.participant_identity || '';
+        // Echo Cancellation (Suggestion 3): 
+        // Only play the translated audio if it was NOT originally spoken by the local participant, or if loopback is enabled.
+        if (audioData && (hearOwnTranslation || participantIdentity !== identityInput)) {
+          addLog(`StreamingTranslationAudioEvent received (${audioData.length} chars) from speaker ${participantIdentity}`);
+          pcmPlayer.playChunk(audioData);
+        } else if (audioData) {
+          addLog(`Echo Cancellation: Ignored playing our own translation audio.`);
+        }
       }
-    }
-    
-    else if (event.type === 'StreamingTranslationCompletedEvent') {
-      setPipelineState('Completed');
-      const fullText = event.payload.full_text || '';
-      if (fullText) {
-        setSpanishTranslation(fullText);
+      
+      else if (event.type === 'StreamingTranslationCompletedEvent') {
+        const fullText = event.payload.full_text || '';
+        if (fullText) {
+          setSpanishTranslation(fullText);
+        }
+        addLog(`Translation Event Completed.`);
       }
-      addLog(`Translation Event Completed.`);
-    }
-    
-    else if (event.type === 'StreamingRuntimeErrorEvent') {
-      setPipelineState('Error');
-      const errMsg = event.payload.error_message || 'Runtime streaming error';
-      setErrorMessage(errMsg);
-      addLog(`Gemini Streaming Error: ${errMsg}`);
-    }
-  }, [aiEvents, chunkHistory, addLog]);
+      
+      else if (event.type === 'StreamingRuntimeErrorEvent') {
+        const errMsg = event.payload.error_message || 'Runtime streaming error';
+        setErrorMessage(errMsg);
+        addLog(`Gemini Streaming Error: ${errMsg}`);
+      }
+    });
+  }, [aiEvents, addLog, identityInput, hearOwnTranslation]);
 
   // Auto-scroll scrollable areas
   useEffect(() => {
     if (englishScrollRef.current) {
       englishScrollRef.current.scrollTop = englishScrollRef.current.scrollHeight;
     }
-  }, [englishTranscript]);
+  }, [englishTranscript, englishInterim]);
 
   useEffect(() => {
     if (spanishScrollRef.current) {
@@ -377,19 +279,13 @@ export default function Home() {
     }
   }, [spanishTranslation]);
 
-  useEffect(() => {
-    if (logsScrollRef.current) {
-      logsScrollRef.current.scrollTop = logsScrollRef.current.scrollHeight;
-    }
-  }, [devLogs]);
-
   // Connect handler
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!roomNameInput.trim() || !identityInput.trim()) return;
     setErrorMessage(null);
     try {
-      await connect(roomNameInput, identityInput);
+      await connect(roomNameInput, identityInput, hearOwnTranslation);
     } catch (err: any) {
       setErrorMessage(err.message || 'Room connection failed.');
     }
@@ -397,14 +293,12 @@ export default function Home() {
 
   // Disconnect handler
   const handleDisconnect = async () => {
-    setPipelineState('Idle');
     setPlaybackState('idle');
-    ttsService.stop();
     pcmPlayer.stop();
     await disconnect();
   };
 
-  const aiTelemetry = telemetryData?.ai;
+
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
@@ -419,20 +313,6 @@ export default function Home() {
         </div>
         
         <div className="flex items-center space-x-4">
-          {/* Developer Mode Toggle */}
-          <div className="flex items-center space-x-2 bg-slate-900/60 border border-slate-800 rounded-lg p-1">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2">Dev Mode</span>
-            <button
-              id="dev-mode-toggle"
-              onClick={() => setDeveloperMode(!developerMode)}
-              className={`text-xs font-bold px-3 py-1 rounded transition ${
-                developerMode ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              {developerMode ? 'ON' : 'OFF'}
-            </button>
-          </div>
-
           <div className="flex items-center space-x-2 text-xs">
             <span className="text-slate-500">Backend:</span>
             <span className={`px-2 py-0.5 rounded font-mono font-semibold uppercase ${
@@ -487,6 +367,18 @@ export default function Home() {
                     required
                   />
                 </div>
+                <div className="flex items-center space-x-2 py-1">
+                  <input
+                    id="hear-own-translation"
+                    type="checkbox"
+                    checked={hearOwnTranslation}
+                    onChange={(e) => setHearOwnTranslation(e.target.checked)}
+                    className="rounded bg-slate-950 border-slate-800 text-indigo-650 focus:ring-indigo-500 focus:ring-offset-slate-900 cursor-pointer"
+                  />
+                  <label htmlFor="hear-own-translation" className="text-[11px] text-slate-400 font-semibold cursor-pointer select-none">
+                    Hear Own Translation (Local Loopback Test)
+                  </label>
+                </div>
                 <button
                   type="submit"
                   disabled={isConnecting || !backendConnected}
@@ -505,6 +397,15 @@ export default function Home() {
                   <div className="flex justify-between">
                     <span className="text-slate-400">User Identity:</span>
                     <span className="font-mono text-indigo-400 font-bold">{identityInput}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 mt-1 border-t border-indigo-500/10">
+                    <span className="text-slate-400">Local Loopback (Hear Own Voice):</span>
+                    <input
+                      type="checkbox"
+                      checked={hearOwnTranslation}
+                      onChange={(e) => setHearOwnTranslation(e.target.checked)}
+                      className="rounded bg-slate-950 border-slate-800 text-indigo-650 focus:ring-indigo-500 focus:ring-offset-slate-900 cursor-pointer"
+                    />
                   </div>
                 </div>
 
@@ -535,62 +436,6 @@ export default function Home() {
               </div>
             )}
           </div>
-
-          {/* Operational State Card */}
-          <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl p-6 shadow-xl">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center space-x-2">
-              <span className="w-1.5 h-3 bg-indigo-500 rounded" />
-              <span>Session Status</span>
-            </h2>
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-xs uppercase transition border ${
-                  pipelineState === 'Error' ? 'bg-rose-500/10 border-rose-500 text-rose-400' :
-                  pipelineState === 'Translating' || pipelineState === 'Chunk Processing' ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400' :
-                  pipelineState === 'Playing Audio' ? 'bg-violet-500/10 border-violet-500 text-violet-400' :
-                  isConnected ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-slate-950 border-slate-850 text-slate-500'
-                }`}>
-                  {pipelineState === 'Error' ? 'ERR' : 
-                   pipelineState === 'Translating' ? 'AI' :
-                   pipelineState === 'Playing Audio' ? 'TTS' :
-                   isConnected ? 'LIVE' : 'OFF'}
-                </div>
-                {isConnected && pipelineState !== 'Idle' && (
-                  <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
-                  </span>
-                )}
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Pipeline State</p>
-                <p className="text-sm font-bold text-white mt-0.5">{pipelineState}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Latency statistics summary */}
-          <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl p-6 shadow-xl">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center space-x-2">
-              <span className="w-1.5 h-3 bg-indigo-500 rounded" />
-              <span>Performance Summary</span>
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-950/60 border border-slate-850 rounded-xl p-3">
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Avg TTFT</p>
-                <p className="text-xl font-bold text-indigo-400 mt-1">
-                  {isConnected && aiTelemetry ? `${Math.round(aiTelemetry.avg_first_token_latency_ms || 0)} ms` : '--'}
-                </p>
-              </div>
-              <div className="bg-slate-950/60 border border-slate-850 rounded-xl p-3">
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Avg Latency</p>
-                <p className="text-xl font-bold text-indigo-400 mt-1">
-                  {isConnected && aiTelemetry ? `${Math.round(aiTelemetry.avg_total_ai_latency_ms || 0)} ms` : '--'}
-                </p>
-              </div>
-            </div>
-          </div>
-
         </div>
 
         {/* Center/Right primary panels */}
@@ -599,7 +444,7 @@ export default function Home() {
           {/* Main User Card (User A English to User B Spanish) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <TranscriptCard 
-              englishTranscript={englishTranscript} 
+              englishTranscript={englishTranscript + (englishInterim ? ' ' + englishInterim : '')} 
               englishScrollRef={englishScrollRef} 
             />
             <TranslationCard 
@@ -608,27 +453,6 @@ export default function Home() {
               playbackState={playbackState} 
             />
           </div>
-
-          {/* Pipeline stage visualizer */}
-          <PipelineVisualizer 
-            pipelineState={pipelineState} 
-            playbackState={playbackState} 
-            isConnected={isConnected} 
-          />
-
-          {/* Developer dashboard panels: only visible in dev mode */}
-          {developerMode && (
-            <div className="space-y-6 animate-fadeIn">
-              <TelemetryDashboard telemetryData={telemetryData} />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <ChunkHistoryList chunkHistory={chunkHistory} />
-                <TimelineVisualizer lastTimelineEvents={lastTimelineEvents} />
-              </div>
-
-              <LogsConsole devLogs={devLogs} logsScrollRef={logsScrollRef} />
-            </div>
-          )}
 
         </div>
 

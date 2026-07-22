@@ -12,7 +12,7 @@ export default function TranslationCard({ spanishTranslation, spanishScrollRef, 
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-2">
           <span className={`w-2 h-2 rounded-full ${playbackState === 'playing' ? 'bg-violet-500 animate-ping' : 'bg-slate-600'}`} />
-          <span>User B (Listener - Spanish)</span>
+          <span>Spanish (Live Translation)</span>
         </h3>
         <span className={`text-[10px] px-2 py-0.5 rounded font-semibold font-mono uppercase border transition ${
           playbackState === 'playing' 

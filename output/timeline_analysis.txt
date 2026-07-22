@@ -1,0 +1,1354 @@
+--- FULL CHRONOLOGICAL TIMELINE OF LATEST SESSION ---
+[0.0000s - 3.6835s] SENT: 181 packets (3620ms of audio) corr=['corr-6c031dac']
+[3.7360s] RECV_AUDIO: 12000 bytes
+[3.7519s] RECV_AUDIO: 12000 bytes
+[3.7624s - 3.8951s] SENT: 4 packets (80ms of audio) corr=['corr-6c031dac']
+[3.9461s] RECV_AUDIO: 12000 bytes
+[3.9487s - 4.3623s] SENT: 15 packets (300ms of audio) corr=['corr-6c031dac']
+[4.3828s] RECV_AUDIO: 12000 bytes
+[4.3860s] RECV_AUDIO: 12000 bytes
+[4.3926s - 4.7789s] SENT: 20 packets (400ms of audio) corr=['corr-6c031dac']
+[4.8254s] RECV_AUDIO: 12000 bytes
+[4.8280s - 5.0999s] SENT: 20 packets (400ms of audio) corr=['corr-6c031dac']
+[5.1444s] RECV_AUDIO: 12000 bytes
+[5.1492s] RECV_AUDIO: 12000 bytes
+[5.1599s - 5.3945s] SENT: 17 packets (340ms of audio) corr=['corr-6c031dac']
+[5.4191s] RECV_AUDIO: 12000 bytes
+[5.4245s - 5.6129s] SENT: 17 packets (340ms of audio) corr=['corr-6c031dac']
+[5.6828s] RECV_AUDIO: 12000 bytes
+[5.6967s - 6.1700s] SENT: 12 packets (240ms of audio) corr=['corr-6c031dac']
+[6.2915s] RECV_AUDIO: 12000 bytes
+[6.3012s] RECV_AUDIO: 12000 bytes
+[6.3173s - 6.5750s] SENT: 16 packets (320ms of audio) corr=['corr-6c031dac']
+[6.5808s] RECV_AUDIO: 12000 bytes
+[6.7806s - 7.0973s] SENT: 17 packets (340ms of audio) corr=['corr-6c031dac']
+[7.1658s] RECV_AUDIO: 12000 bytes
+[7.1925s] RECV_AUDIO: 12000 bytes
+[7.1960s - 7.4518s] SENT: 18 packets (360ms of audio) corr=['corr-6c031dac']
+[7.5142s] RECV_AUDIO: 12000 bytes
+[7.5176s] RECV_AUDIO: 12000 bytes
+[7.5437s - 7.6143s] SENT: 13 packets (260ms of audio) corr=['corr-6c031dac']
+[7.7659s] RECV_AUDIO: 12000 bytes
+[7.7742s - 8.0691s] SENT: 29 packets (580ms of audio) corr=['corr-6c031dac']
+[8.1352s] RECV_AUDIO: 12000 bytes
+[8.1468s] RECV_AUDIO: 12000 bytes
+[8.1498s - 8.5611s] SENT: 30 packets (600ms of audio) corr=['corr-6c031dac']
+[8.6001s] RECV_AUDIO: 12000 bytes
+[8.6129s] RECV_AUDIO: 12000 bytes
+[8.6168s - 9.1160s] SENT: 24 packets (480ms of audio) corr=['corr-6c031dac']
+[9.1404s] RECV_AUDIO: 12000 bytes
+[9.1768s] RECV_AUDIO: 12000 bytes
+[9.1855s - 9.8313s] SENT: 22 packets (440ms of audio) corr=['corr-6c031dac']
+[9.9269s] RECV_AUDIO: 12000 bytes
+[9.9300s] RECV_AUDIO: 12000 bytes
+[9.9326s] RECV_AUDIO: 12000 bytes
+[9.9580s - 10.8931s] SENT: 37 packets (740ms of audio) corr=['corr-6c031dac', 'corr-a6c10bcc']
+[10.9938s] RECV_AUDIO: 12000 bytes
+[11.0004s] RECV_AUDIO: 12000 bytes
+[11.0089s] RECV_AUDIO: 12000 bytes
+[11.0155s] RECV_AUDIO: 12000 bytes
+[11.0325s - 12.1501s] SENT: 47 packets (940ms of audio) corr=['corr-a6c10bcc']
+[12.2309s] RECV_AUDIO: 12000 bytes
+[12.2349s] RECV_AUDIO: 12000 bytes
+[12.2408s] RECV_AUDIO: 12000 bytes
+[12.2441s] RECV_AUDIO: 12000 bytes
+[12.2601s] RECV_AUDIO: 12000 bytes
+[12.2655s - 13.1668s] SENT: 68 packets (1360ms of audio) corr=['corr-a6c10bcc']
+[13.1958s] RECV_AUDIO: 12000 bytes
+[13.1992s] RECV_AUDIO: 12000 bytes
+[13.2013s] RECV_AUDIO: 12000 bytes
+[13.2162s - 13.5341s] SENT: 15 packets (300ms of audio) corr=['corr-a6c10bcc']
+[13.5997s] RECV_AUDIO: 12000 bytes
+[13.6112s] RECV_AUDIO: 12000 bytes
+[13.6186s - 13.9421s] SENT: 41 packets (820ms of audio) corr=['corr-a6c10bcc']
+[13.9467s] RECV_AUDIO: 12000 bytes
+[13.9661s] RECV_AUDIO: 12000 bytes
+[14.0671s - 14.2618s] SENT: 21 packets (420ms of audio) corr=['corr-a6c10bcc']
+[14.3122s] RECV_TEXT: 'Hola.'
+[14.3299s] RECV_AUDIO: 12000 bytes
+[14.3431s - 14.6553s] SENT: 19 packets (380ms of audio) corr=['corr-a6c10bcc']
+[14.7002s] RECV_AUDIO: 12000 bytes
+[14.7270s - 14.9500s] SENT: 15 packets (300ms of audio) corr=['corr-a6c10bcc']
+[14.9667s] RECV_AUDIO: 12000 bytes
+[14.9872s] RECV_AUDIO: 12000 bytes
+[15.0828s - 15.5570s] SENT: 30 packets (600ms of audio) corr=['corr-a6c10bcc']
+[15.5988s] RECV_AUDIO: 12000 bytes
+[15.6123s] RECV_AUDIO: 12000 bytes
+[15.6332s - 15.6655s] SENT: 6 packets (120ms of audio) corr=['corr-a6c10bcc']
+[15.8327s] RECV_AUDIO: 12000 bytes
+[15.8622s - 16.3514s] SENT: 30 packets (600ms of audio) corr=['corr-a6c10bcc']
+[16.4679s] RECV_AUDIO: 12000 bytes
+[16.4759s] RECV_AUDIO: 12000 bytes
+[16.4790s] RECV_AUDIO: 12000 bytes
+[16.4830s - 17.3507s] SENT: 23 packets (460ms of audio) corr=['corr-a6c10bcc']
+[17.4013s] RECV_AUDIO: 12000 bytes
+[17.4223s] RECV_AUDIO: 12000 bytes
+[17.4318s] RECV_AUDIO: 12000 bytes
+[17.4348s] RECV_AUDIO: 12000 bytes
+[17.4439s - 18.6347s] SENT: 66 packets (1320ms of audio) corr=['corr-a6c10bcc']
+[18.7544s] RECV_AUDIO: 12000 bytes
+[18.7627s] RECV_AUDIO: 12000 bytes
+[18.7653s] RECV_AUDIO: 12000 bytes
+[18.7752s] RECV_AUDIO: 12000 bytes
+[18.7846s] RECV_AUDIO: 12000 bytes
+[18.7961s - 20.1154s] SENT: 60 packets (1200ms of audio) corr=['corr-a6c10bcc']
+[20.1762s] RECV_AUDIO: 12000 bytes
+[20.1807s] RECV_AUDIO: 12000 bytes
+[20.1911s] RECV_AUDIO: 12000 bytes
+[20.2307s] RECV_AUDIO: 12000 bytes
+[20.2347s] RECV_AUDIO: 12000 bytes
+[20.6294s - 20.7326s] SENT: 10 packets (200ms of audio) corr=['corr-a6c10bcc']
+[20.9767s] RECV_AUDIO: 12000 bytes
+[20.9829s] RECV_AUDIO: 12000 bytes
+[20.9935s - 21.5841s] SENT: 56 packets (1120ms of audio) corr=['corr-a6c10bcc']
+[21.6842s] RECV_AUDIO: 12000 bytes
+[21.6968s] RECV_AUDIO: 12000 bytes
+[21.7099s] RECV_AUDIO: 12000 bytes
+[21.7152s] RECV_AUDIO: 12000 bytes
+[21.7479s - 21.8511s] SENT: 21 packets (420ms of audio) corr=['corr-a6c10bcc']
+[22.1821s] RECV_AUDIO: 12000 bytes
+[22.2321s] RECV_AUDIO: 12000 bytes
+[22.2351s - 23.1591s] SENT: 54 packets (1080ms of audio) corr=['corr-a6c10bcc']
+[23.2209s] RECV_AUDIO: 12000 bytes
+[23.2401s] RECV_AUDIO: 12000 bytes
+[23.2558s - 23.6128s] SENT: 38 packets (760ms of audio) corr=['corr-a6c10bcc']
+[23.6239s] RECV_AUDIO: 12000 bytes
+[23.6283s] RECV_AUDIO: 12000 bytes
+[23.6324s] RECV_AUDIO: 12000 bytes
+[23.6369s] RECV_AUDIO: 12000 bytes
+[23.9830s - 24.0631s] SENT: 16 packets (320ms of audio) corr=['corr-a6c10bcc']
+[24.3489s] RECV_AUDIO: 12000 bytes
+[24.3754s - 24.7089s] SENT: 48 packets (960ms of audio) corr=['corr-a6c10bcc']
+[24.7761s] RECV_AUDIO: 12000 bytes
+[24.7979s] RECV_AUDIO: 12000 bytes
+[24.8098s] RECV_AUDIO: 12000 bytes
+[24.8118s] RECV_AUDIO: 12000 bytes
+[24.8169s - 25.2128s] SENT: 44 packets (880ms of audio) corr=['corr-a6c10bcc']
+[25.2617s] RECV_AUDIO: 12000 bytes
+[25.2648s] RECV_AUDIO: 12000 bytes
+[25.2677s - 25.6158s] SENT: 35 packets (700ms of audio) corr=['corr-a6c10bcc']
+[25.6794s] RECV_AUDIO: 12000 bytes
+[25.7094s] RECV_AUDIO: 12000 bytes
+[25.7134s - 26.1600s] SENT: 26 packets (520ms of audio) corr=['corr-a6c10bcc']
+[26.3089s] RECV_AUDIO: 12000 bytes
+[26.3152s] RECV_AUDIO: 12000 bytes
+[26.3248s - 26.3641s] SENT: 8 packets (160ms of audio) corr=['corr-a6c10bcc']
+[26.5621s] RECV_AUDIO: 12000 bytes
+[26.5657s - 26.6657s] SENT: 16 packets (320ms of audio) corr=['corr-a6c10bcc']
+[26.8109s] RECV_AUDIO: 12000 bytes
+[26.8151s - 26.9963s] SENT: 14 packets (280ms of audio) corr=['corr-ec2a2c84', 'corr-a6c10bcc']
+[27.0935s] RECV_AUDIO: 12000 bytes
+[27.0968s - 27.4911s] SENT: 28 packets (560ms of audio) corr=['corr-ec2a2c84']
+[27.5602s] RECV_AUDIO: 12000 bytes
+[27.5667s] RECV_AUDIO: 12000 bytes
+[27.5776s - 27.6329s] SENT: 11 packets (220ms of audio) corr=['corr-ec2a2c84']
+[28.1955s] RECV_AUDIO: 12000 bytes
+[28.2132s - 28.4101s] SENT: 16 packets (320ms of audio) corr=['corr-ec2a2c84']
+[28.4499s] RECV_AUDIO: 12000 bytes
+[28.4610s] RECV_AUDIO: 12000 bytes
+[28.4661s] RECV_AUDIO: 12000 bytes
+[28.4960s - 29.2859s] SENT: 51 packets (1020ms of audio) corr=['corr-ec2a2c84']
+[29.4928s] RECV_AUDIO: 12000 bytes
+[29.4983s] RECV_AUDIO: 12000 bytes
+[29.5178s] RECV_AUDIO: 12000 bytes
+[29.5291s - 30.1254s] SENT: 36 packets (720ms of audio) corr=['corr-ec2a2c84']
+[30.1327s] RECV_AUDIO: 12000 bytes
+[30.1388s] RECV_AUDIO: 12000 bytes
+[30.1418s] RECV_AUDIO: 12000 bytes
+[30.3138s - 30.3586s] SENT: 6 packets (120ms of audio) corr=['corr-ec2a2c84', 'corr-7786564b']
+[30.4110s] RECV_AUDIO: 12000 bytes
+[30.4132s - 30.5034s] SENT: 12 packets (240ms of audio) corr=['corr-c515924c', 'corr-7786564b']
+[30.6755s] RECV_AUDIO: 12000 bytes
+[30.6786s - 31.1030s] SENT: 33 packets (660ms of audio) corr=['corr-c515924c']
+[31.2197s] RECV_AUDIO: 12000 bytes
+[31.2257s] RECV_AUDIO: 12000 bytes
+[31.2421s - 31.3091s] SENT: 12 packets (240ms of audio) corr=['corr-c515924c']
+[31.4447s] RECV_AUDIO: 12000 bytes
+[31.4472s] RECV_AUDIO: 12000 bytes
+[31.4498s - 32.0160s] SENT: 51 packets (1020ms of audio) corr=['corr-c515924c']
+[32.0267s] RECV_AUDIO: 12000 bytes
+[32.0292s] RECV_AUDIO: 12000 bytes
+[32.1578s - 32.3113s] SENT: 17 packets (340ms of audio) corr=['corr-c515924c']
+[32.3599s] RECV_AUDIO: 12000 bytes
+[32.3652s] RECV_AUDIO: 12000 bytes
+[32.3760s - 33.0717s] SENT: 24 packets (480ms of audio) corr=['corr-c515924c']
+[33.1498s] RECV_AUDIO: 12000 bytes
+[33.1613s] RECV_AUDIO: 12000 bytes
+[33.1655s - 33.3270s] SENT: 8 packets (160ms of audio) corr=['corr-c515924c']
+[33.3807s] RECV_AUDIO: 12000 bytes
+[33.3901s - 33.5091s] SENT: 25 packets (500ms of audio) corr=['corr-c515924c']
+[33.6598s] RECV_AUDIO: 12000 bytes
+[33.6653s] RECV_AUDIO: 12000 bytes
+[33.6730s - 33.9468s] SENT: 23 packets (460ms of audio) corr=['corr-c515924c']
+[34.0946s] RECV_AUDIO: 12000 bytes
+[34.1114s - 34.3247s] SENT: 23 packets (460ms of audio) corr=['corr-c515924c']
+[34.3312s] RECV_AUDIO: 12000 bytes
+[34.4634s - 34.5121s] SENT: 4 packets (80ms of audio) corr=['corr-c515924c']
+[34.5806s] RECV_AUDIO: 12000 bytes
+[34.5828s - 34.9000s] SENT: 23 packets (460ms of audio) corr=['corr-c515924c']
+[34.9271s] RECV_AUDIO: 12000 bytes
+[34.9302s] RECV_AUDIO: 12000 bytes
+[34.9486s - 35.2650s] SENT: 25 packets (500ms of audio) corr=['corr-c515924c']
+[35.2976s] RECV_AUDIO: 12000 bytes
+[35.3050s] RECV_AUDIO: 12000 bytes
+[35.3091s - 35.6279s] SENT: 16 packets (320ms of audio) corr=['corr-c515924c']
+[35.6646s] RECV_AUDIO: 12000 bytes
+[35.6688s - 35.9321s] SENT: 20 packets (400ms of audio) corr=['corr-c515924c']
+[35.9777s] RECV_AUDIO: 12000 bytes
+[35.9801s - 36.2302s] SENT: 18 packets (360ms of audio) corr=['corr-c515924c']
+[36.2322s] RECV_AUDIO: 12000 bytes
+[36.3211s - 36.5244s] SENT: 13 packets (260ms of audio) corr=['corr-c515924c']
+[36.5433s] RECV_AUDIO: 12000 bytes
+[36.5600s - 36.7451s] SENT: 12 packets (240ms of audio) corr=['corr-c515924c']
+[36.7670s] RECV_AUDIO: 12000 bytes
+[36.7730s - 36.9995s] SENT: 12 packets (240ms of audio) corr=['corr-c515924c']
+[37.0583s] RECV_AUDIO: 12000 bytes
+[37.0654s - 37.3833s] SENT: 6 packets (120ms of audio) corr=['corr-c515924c']
+[37.4338s] RECV_AUDIO: 12000 bytes
+[37.4578s] RECV_AUDIO: 12000 bytes
+[37.4609s - 37.6474s] SENT: 12 packets (240ms of audio) corr=['corr-c515924c']
+[37.9361s] RECV_AUDIO: 12000 bytes
+[37.9437s - 38.2835s] SENT: 19 packets (380ms of audio) corr=['corr-c515924c']
+[38.3198s] RECV_AUDIO: 12000 bytes
+[38.3309s] RECV_AUDIO: 12000 bytes
+[38.3460s - 38.3955s] SENT: 8 packets (160ms of audio) corr=['corr-c515924c']
+[38.5269s] RECV_AUDIO: 12000 bytes
+[38.5309s - 38.8619s] SENT: 37 packets (740ms of audio) corr=['corr-c515924c', 'corr-661a2108']
+[38.8961s] RECV_AUDIO: 12000 bytes
+[38.8997s] RECV_AUDIO: 12000 bytes
+[38.9119s - 39.1804s] SENT: 17 packets (340ms of audio) corr=['corr-661a2108']
+[39.2630s] RECV_AUDIO: 12000 bytes
+[39.2754s - 39.5081s] SENT: 12 packets (240ms of audio) corr=['corr-661a2108']
+[39.5912s] RECV_AUDIO: 12000 bytes
+[39.5965s - 39.8608s] SENT: 26 packets (520ms of audio) corr=['corr-661a2108']
+[39.9150s] RECV_AUDIO: 12000 bytes
+[39.9328s] RECV_AUDIO: 12000 bytes
+[39.9497s - 40.2614s] SENT: 19 packets (380ms of audio) corr=['corr-661a2108']
+[40.2726s] RECV_TEXT: ' Hola.'
+[40.2891s] RECV_AUDIO: 12000 bytes
+[40.3461s - 40.5748s] SENT: 17 packets (340ms of audio) corr=['corr-661a2108']
+[40.6658s] RECV_AUDIO: 12000 bytes
+[40.6806s - 40.9318s] SENT: 7 packets (140ms of audio) corr=['corr-661a2108']
+[40.9406s] RECV_AUDIO: 12000 bytes
+[41.0311s - 41.1119s] SENT: 9 packets (180ms of audio) corr=['corr-661a2108']
+[41.1180s] RECV_TEXT: ' ¿Cómo estás?'
+[41.1397s] RECV_AUDIO: 12000 bytes
+[41.3441s - 41.4276s] SENT: 10 packets (200ms of audio) corr=['corr-661a2108']
+[41.5606s] RECV_AUDIO: 12000 bytes
+[41.6269s - 41.8313s] SENT: 15 packets (300ms of audio) corr=['corr-661a2108']
+[41.9145s] RECV_AUDIO: 12000 bytes
+[41.9325s] RECV_AUDIO: 12000 bytes
+[41.9650s - 42.0952s] SENT: 13 packets (260ms of audio) corr=['corr-661a2108']
+[42.3613s] RECV_AUDIO: 12000 bytes
+[42.3623s] RECV_AUDIO: 12000 bytes
+[42.3647s - 42.6312s] SENT: 29 packets (580ms of audio) corr=['corr-661a2108']
+[42.6829s] RECV_AUDIO: 12000 bytes
+[42.6930s - 43.2977s] SENT: 27 packets (540ms of audio) corr=['corr-661a2108']
+[43.3618s] RECV_AUDIO: 12000 bytes
+[43.3657s] RECV_AUDIO: 12000 bytes
+[43.3906s - 43.5888s] SENT: 17 packets (340ms of audio) corr=['corr-661a2108']
+[43.5976s] RECV_AUDIO: 12000 bytes
+[43.6275s] RECV_AUDIO: 12000 bytes
+[43.7335s - 44.0231s] SENT: 34 packets (680ms of audio) corr=['corr-661a2108']
+[44.0457s] RECV_AUDIO: 12000 bytes
+[44.0508s] RECV_AUDIO: 12000 bytes
+[44.0637s - 44.3156s] SENT: 15 packets (300ms of audio) corr=['corr-661a2108']
+[44.3598s] RECV_AUDIO: 12000 bytes
+[44.3734s - 44.5840s] SENT: 19 packets (380ms of audio) corr=['corr-661a2108']
+[44.6480s] RECV_AUDIO: 12000 bytes
+[44.6575s] RECV_AUDIO: 12000 bytes
+[44.6768s - 44.9646s] SENT: 25 packets (500ms of audio) corr=['corr-661a2108']
+[44.9925s] RECV_AUDIO: 12000 bytes
+[45.0258s - 45.3468s] SENT: 17 packets (340ms of audio) corr=['corr-661a2108']
+[45.3800s] RECV_AUDIO: 12000 bytes
+[45.3825s] RECV_AUDIO: 12000 bytes
+[45.3911s - 45.6607s] SENT: 21 packets (420ms of audio) corr=['corr-661a2108']
+[45.6959s] RECV_AUDIO: 12000 bytes
+[45.6990s - 45.8866s] SENT: 18 packets (360ms of audio) corr=['corr-661a2108']
+[45.8978s] RECV_AUDIO: 12000 bytes
+[45.9149s - 46.0945s] SENT: 11 packets (220ms of audio) corr=['corr-661a2108']
+[46.1199s] RECV_AUDIO: 12000 bytes
+[46.1260s - 46.3961s] SENT: 17 packets (340ms of audio) corr=['corr-661a2108']
+[46.4046s] RECV_AUDIO: 12000 bytes
+[46.5119s - 46.6473s] SENT: 10 packets (200ms of audio) corr=['corr-661a2108']
+[46.6997s] RECV_AUDIO: 12000 bytes
+[46.7223s - 46.9822s] SENT: 18 packets (360ms of audio) corr=['corr-661a2108']
+[46.9908s] RECV_AUDIO: 12000 bytes
+[47.0545s - 47.1629s] SENT: 9 packets (180ms of audio) corr=['corr-661a2108']
+[47.1725s] RECV_AUDIO: 12000 bytes
+[47.1766s - 47.3827s] SENT: 13 packets (260ms of audio) corr=['corr-661a2108']
+[47.3897s] RECV_AUDIO: 12000 bytes
+[47.4253s - 47.6271s] SENT: 15 packets (300ms of audio) corr=['corr-661a2108']
+[47.6754s] RECV_AUDIO: 12000 bytes
+[47.7316s - 48.0104s] SENT: 4 packets (80ms of audio) corr=['corr-661a2108']
+[48.1271s] RECV_AUDIO: 12000 bytes
+[48.1749s - 48.5619s] SENT: 15 packets (300ms of audio) corr=['corr-661a2108']
+[48.6253s] RECV_AUDIO: 12000 bytes
+[48.6293s] RECV_AUDIO: 12000 bytes
+[48.6318s - 48.7632s] SENT: 9 packets (180ms of audio) corr=['corr-661a2108']
+[48.7987s] RECV_AUDIO: 12000 bytes
+[48.8109s - 49.0419s] SENT: 29 packets (580ms of audio) corr=['corr-661a2108']
+[49.0778s] RECV_AUDIO: 12000 bytes
+[49.0826s - 49.1670s] SENT: 13 packets (260ms of audio) corr=['corr-661a2108']
+[49.1770s] RECV_AUDIO: 12000 bytes
+[49.1790s - 49.2925s] SENT: 16 packets (320ms of audio) corr=['corr-661a2108']
+[49.2990s] RECV_AUDIO: 12000 bytes
+[49.3229s - 49.5368s] SENT: 14 packets (280ms of audio) corr=['corr-661a2108']
+[49.5569s] RECV_AUDIO: 12000 bytes
+[49.6991s - 49.8849s] SENT: 13 packets (260ms of audio) corr=['corr-661a2108']
+[49.8943s] RECV_AUDIO: 12000 bytes
+[49.9938s - 50.1648s] SENT: 5 packets (100ms of audio) corr=['corr-661a2108']
+[50.1770s] RECV_AUDIO: 12000 bytes
+[50.1920s - 50.3541s] SENT: 15 packets (300ms of audio) corr=['corr-661a2108']
+[50.3987s] RECV_AUDIO: 12000 bytes
+[50.4188s - 50.6111s] SENT: 7 packets (140ms of audio) corr=['corr-661a2108']
+[50.6390s] RECV_AUDIO: 12000 bytes
+[50.6611s - 50.8939s] SENT: 18 packets (360ms of audio) corr=['corr-661a2108']
+[50.9467s] RECV_AUDIO: 12000 bytes
+[50.9754s - 51.0820s] SENT: 7 packets (140ms of audio) corr=['corr-661a2108']
+[51.1204s] RECV_AUDIO: 12000 bytes
+[51.1307s - 51.4068s] SENT: 14 packets (280ms of audio) corr=['corr-661a2108']
+[51.4727s] RECV_AUDIO: 12000 bytes
+[51.4768s - 51.7259s] SENT: 11 packets (220ms of audio) corr=['corr-661a2108']
+[51.7429s] RECV_AUDIO: 12000 bytes
+[51.7488s - 51.9312s] SENT: 15 packets (300ms of audio) corr=['corr-661a2108']
+[51.9621s] RECV_AUDIO: 12000 bytes
+[51.9799s - 52.1598s] SENT: 10 packets (200ms of audio) corr=['corr-661a2108']
+[52.1953s] RECV_AUDIO: 12000 bytes
+[52.2469s - 52.5151s] SENT: 19 packets (380ms of audio) corr=['corr-661a2108']
+[52.5481s] RECV_AUDIO: 12000 bytes
+[52.5546s - 52.6714s] SENT: 8 packets (160ms of audio) corr=['corr-661a2108']
+[52.7144s] RECV_AUDIO: 12000 bytes
+[52.7267s - 53.0156s] SENT: 15 packets (300ms of audio) corr=['corr-661a2108']
+[53.2167s] RECV_AUDIO: 12000 bytes
+[53.2436s - 53.6087s] SENT: 9 packets (180ms of audio) corr=['corr-661a2108']
+[53.7168s] RECV_AUDIO: 12000 bytes
+[53.7252s] RECV_AUDIO: 12000 bytes
+[53.7314s] RECV_AUDIO: 12000 bytes
+[53.7393s - 54.1744s] SENT: 34 packets (680ms of audio) corr=['corr-661a2108']
+[54.2290s] RECV_AUDIO: 12000 bytes
+[54.2325s] RECV_AUDIO: 12000 bytes
+[54.2587s - 54.6156s] SENT: 27 packets (540ms of audio) corr=['corr-661a2108']
+[54.7274s] RECV_AUDIO: 12000 bytes
+[54.7307s] RECV_AUDIO: 12000 bytes
+[54.7422s - 55.1632s] SENT: 32 packets (640ms of audio) corr=['corr-661a2108']
+[55.2154s] RECV_AUDIO: 12000 bytes
+[55.2291s] RECV_AUDIO: 12000 bytes
+[55.2403s - 55.4023s] SENT: 20 packets (400ms of audio) corr=['corr-661a2108']
+[55.4200s] RECV_AUDIO: 12000 bytes
+[55.4243s - 55.6239s] SENT: 15 packets (300ms of audio) corr=['corr-661a2108']
+[55.6645s] RECV_AUDIO: 12000 bytes
+[55.6743s - 55.8908s] SENT: 16 packets (320ms of audio) corr=['corr-661a2108']
+[55.9022s] RECV_AUDIO: 12000 bytes
+[55.9158s - 56.2472s] SENT: 13 packets (260ms of audio) corr=['corr-661a2108']
+[56.2781s] RECV_AUDIO: 12000 bytes
+[56.2932s - 56.3810s] SENT: 6 packets (120ms of audio) corr=['corr-661a2108']
+[56.3987s] RECV_AUDIO: 12000 bytes
+[56.5099s - 56.6456s] SENT: 13 packets (260ms of audio) corr=['corr-661a2108']
+[56.7120s] RECV_AUDIO: 12000 bytes
+[56.7610s - 56.9568s] SENT: 12 packets (240ms of audio) corr=['corr-661a2108']
+[56.9783s] RECV_AUDIO: 12000 bytes
+[56.9868s - 57.1817s] SENT: 18 packets (360ms of audio) corr=['corr-661a2108']
+[57.2055s] RECV_AUDIO: 12000 bytes
+[57.2393s - 57.4268s] SENT: 12 packets (240ms of audio) corr=['corr-661a2108']
+[57.4599s] RECV_AUDIO: 12000 bytes
+[57.4642s - 57.6591s] SENT: 12 packets (240ms of audio) corr=['corr-661a2108']
+[57.7087s] RECV_AUDIO: 12000 bytes
+[57.7112s - 58.3986s] SENT: 9 packets (180ms of audio) corr=['corr-661a2108']
+[58.4217s] RECV_AUDIO: 12000 bytes
+[58.4360s] RECV_AUDIO: 12000 bytes
+[58.5153s] RECV_AUDIO: 12000 bytes
+[58.7956s - 59.1097s] SENT: 23 packets (460ms of audio) corr=['corr-661a2108']
+[59.1648s] RECV_AUDIO: 12000 bytes
+[59.1754s] RECV_AUDIO: 12000 bytes
+[59.1815s - 59.4283s] SENT: 29 packets (580ms of audio) corr=['corr-661a2108']
+[59.4558s] RECV_AUDIO: 12000 bytes
+[59.4599s] RECV_AUDIO: 12000 bytes
+[59.4715s - 59.7559s] SENT: 34 packets (680ms of audio) corr=['corr-661a2108']
+[59.7740s] RECV_AUDIO: 12000 bytes
+[59.7967s - 59.9471s] SENT: 14 packets (280ms of audio) corr=['corr-661a2108']
+[59.9654s] RECV_AUDIO: 12000 bytes
+[59.9933s - 60.1196s] SENT: 7 packets (140ms of audio) corr=['corr-661a2108']
+[60.1290s] RECV_AUDIO: 12000 bytes
+[60.2370s - 60.3957s] SENT: 16 packets (320ms of audio) corr=['corr-661a2108']
+[60.4283s] RECV_AUDIO: 12000 bytes
+[60.4411s - 60.5421s] SENT: 9 packets (180ms of audio) corr=['corr-661a2108', 'corr-68943dc3']
+[60.5972s] RECV_AUDIO: 12000 bytes
+[60.6019s - 60.8848s] SENT: 18 packets (360ms of audio) corr=['corr-68943dc3']
+[60.9700s] RECV_AUDIO: 12000 bytes
+[60.9898s - 61.1050s] SENT: 11 packets (220ms of audio) corr=['corr-68943dc3']
+[61.1286s] RECV_AUDIO: 12000 bytes
+[61.1489s - 61.3751s] SENT: 12 packets (240ms of audio) corr=['corr-68943dc3', 'corr-106358f2']
+[61.3975s] RECV_AUDIO: 12000 bytes
+[61.4076s - 61.6442s] SENT: 18 packets (360ms of audio) corr=['corr-106358f2', 'corr-bcff4d0a']
+[61.6754s] RECV_AUDIO: 12000 bytes
+[61.6795s - 61.8446s] SENT: 7 packets (140ms of audio) corr=['corr-bcff4d0a']
+[61.8791s] RECV_AUDIO: 12000 bytes
+[61.8947s - 62.0678s] SENT: 12 packets (240ms of audio) corr=['corr-bcff4d0a']
+[62.0819s] RECV_AUDIO: 12000 bytes
+[62.0970s - 62.2783s] SENT: 13 packets (260ms of audio) corr=['corr-bcff4d0a']
+[62.3223s] RECV_AUDIO: 12000 bytes
+[62.3259s - 62.6331s] SENT: 20 packets (400ms of audio) corr=['corr-bcff4d0a']
+[62.6433s] RECV_AUDIO: 12000 bytes
+[62.6769s - 62.9389s] SENT: 11 packets (220ms of audio) corr=['corr-bcff4d0a']
+[63.0083s] RECV_AUDIO: 12000 bytes
+[63.0225s - 63.0482s] SENT: 5 packets (100ms of audio) corr=['corr-bcff4d0a']
+[63.2269s] RECV_AUDIO: 12000 bytes
+[63.2284s - 63.7449s] SENT: 17 packets (340ms of audio) corr=['corr-bcff4d0a']
+[63.7744s] RECV_AUDIO: 12000 bytes
+[63.7813s] RECV_AUDIO: 12000 bytes
+[63.8053s - 64.0422s] SENT: 25 packets (500ms of audio) corr=['corr-bcff4d0a']
+[64.0743s] RECV_AUDIO: 12000 bytes
+[64.0909s] RECV_AUDIO: 12000 bytes
+[64.0934s - 64.3931s] SENT: 27 packets (540ms of audio) corr=['corr-bcff4d0a']
+[64.3970s] RECV_AUDIO: 12000 bytes
+[64.4641s - 64.6390s] SENT: 11 packets (220ms of audio) corr=['corr-bcff4d0a']
+[64.6718s] RECV_AUDIO: 12000 bytes
+[64.6768s - 64.8321s] SENT: 7 packets (140ms of audio) corr=['corr-bcff4d0a']
+[64.8698s] RECV_AUDIO: 12000 bytes
+[64.8751s - 65.1474s] SENT: 15 packets (300ms of audio) corr=['corr-bcff4d0a']
+[65.1949s] RECV_AUDIO: 12000 bytes
+[65.2074s - 65.4379s] SENT: 16 packets (320ms of audio) corr=['corr-bcff4d0a']
+[65.4620s] RECV_AUDIO: 12000 bytes
+[65.4750s - 65.6319s] SENT: 12 packets (240ms of audio) corr=['corr-bcff4d0a']
+[65.6461s] RECV_AUDIO: 12000 bytes
+[65.6487s - 65.8279s] SENT: 15 packets (300ms of audio) corr=['corr-bcff4d0a']
+[65.8611s] RECV_AUDIO: 12000 bytes
+[65.8768s - 66.1934s] SENT: 12 packets (240ms of audio) corr=['corr-bcff4d0a']
+[66.2656s] RECV_AUDIO: 12000 bytes
+[66.2937s - 66.4229s] SENT: 12 packets (240ms of audio) corr=['corr-bcff4d0a']
+[66.4269s] RECV_AUDIO: 12000 bytes
+[66.5101s - 66.5457s] SENT: 7 packets (140ms of audio) corr=['corr-bcff4d0a']
+[66.5724s] RECV_AUDIO: 12000 bytes
+[66.5769s - 66.8522s] SENT: 19 packets (380ms of audio) corr=['corr-bcff4d0a']
+[66.8723s] RECV_AUDIO: 12000 bytes
+[66.8820s - 67.2114s] SENT: 11 packets (220ms of audio) corr=['corr-bcff4d0a']
+[67.3430s] RECV_AUDIO: 12000 bytes
+[67.3933s - 67.7003s] SENT: 6 packets (120ms of audio) corr=['corr-bcff4d0a']
+[67.7241s] RECV_AUDIO: 12000 bytes
+[67.7271s] RECV_AUDIO: 12000 bytes
+[67.7297s - 67.8897s] SENT: 32 packets (640ms of audio) corr=['corr-bcff4d0a']
+[67.8972s] RECV_AUDIO: 12000 bytes
+[67.8987s - 68.0290s] SENT: 16 packets (320ms of audio) corr=['corr-bcff4d0a']
+[68.0350s] RECV_AUDIO: 12000 bytes
+[68.0750s - 68.5031s] SENT: 11 packets (220ms of audio) corr=['corr-bcff4d0a']
+[68.5104s] RECV_AUDIO: 12000 bytes
+[68.5814s - 68.6461s] SENT: 13 packets (260ms of audio) corr=['corr-bcff4d0a']
+[68.6672s] RECV_AUDIO: 12000 bytes
+[68.7139s - 68.8120s] SENT: 11 packets (220ms of audio) corr=['corr-bcff4d0a']
+[68.8190s] RECV_AUDIO: 12000 bytes
+[68.8221s - 69.0238s] SENT: 15 packets (300ms of audio) corr=['corr-bcff4d0a']
+[69.0337s] RECV_AUDIO: 12000 bytes
+[69.1121s - 69.2832s] SENT: 11 packets (220ms of audio) corr=['corr-bcff4d0a']
+[69.2933s] RECV_AUDIO: 12000 bytes
+[69.3428s - 69.5149s] SENT: 13 packets (260ms of audio) corr=['corr-bcff4d0a']
+[69.5401s] RECV_AUDIO: 12000 bytes
+[69.5421s - 69.7640s] SENT: 14 packets (280ms of audio) corr=['corr-bcff4d0a']
+[69.7681s] RECV_AUDIO: 12000 bytes
+[69.7970s - 70.0029s] SENT: 12 packets (240ms of audio) corr=['corr-bcff4d0a']
+[70.0155s] RECV_AUDIO: 12000 bytes
+[70.0433s - 70.2634s] SENT: 13 packets (260ms of audio) corr=['corr-bcff4d0a']
+[70.2704s] RECV_AUDIO: 12000 bytes
+[70.2910s - 70.5031s] SENT: 12 packets (240ms of audio) corr=['corr-bcff4d0a']
+[70.5167s] RECV_AUDIO: 12000 bytes
+[70.5588s - 70.7438s] SENT: 12 packets (240ms of audio) corr=['corr-bcff4d0a']
+[70.7688s] RECV_AUDIO: 12000 bytes
+[70.8251s - 71.0036s] SENT: 13 packets (260ms of audio) corr=['corr-bcff4d0a']
+[71.0209s] RECV_AUDIO: 12000 bytes
+[71.1191s - 71.2630s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21', 'corr-bcff4d0a']
+[71.2678s] RECV_AUDIO: 12000 bytes
+[71.3075s - 71.5032s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[71.5154s] RECV_AUDIO: 12000 bytes
+[71.5379s - 71.7653s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[71.7699s] RECV_AUDIO: 12000 bytes
+[71.7971s - 72.0028s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[72.0208s] RECV_AUDIO: 12000 bytes
+[72.0450s - 72.2629s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[72.2674s] RECV_AUDIO: 12000 bytes
+[72.2953s - 72.5037s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[72.5189s] RECV_AUDIO: 12000 bytes
+[72.5547s - 72.7649s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[72.7700s] RECV_AUDIO: 12000 bytes
+[72.8273s - 73.0040s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[73.0171s] RECV_AUDIO: 12000 bytes
+[73.0470s - 73.2623s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[73.2668s] RECV_AUDIO: 12000 bytes
+[73.2910s - 73.5247s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[73.5287s] RECV_AUDIO: 12000 bytes
+[73.6197s - 73.7628s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[73.7673s] RECV_AUDIO: 12000 bytes
+[73.7880s - 74.0007s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[74.0152s] RECV_AUDIO: 12000 bytes
+[74.0313s - 74.2619s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[74.2674s] RECV_AUDIO: 12000 bytes
+[74.2820s - 74.5231s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[74.5261s] RECV_AUDIO: 12000 bytes
+[74.6764s - 74.7687s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[74.7754s] RECV_AUDIO: 12000 bytes
+[74.8026s - 75.0209s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[75.0239s] RECV_AUDIO: 12000 bytes
+[75.0418s - 75.2929s] SENT: 11 packets (220ms of audio) corr=['corr-3fbf1c21']
+[75.2953s] RECV_AUDIO: 12000 bytes
+[75.3164s - 75.5016s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[75.5167s] RECV_AUDIO: 12000 bytes
+[75.5362s - 75.7629s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[75.7675s] RECV_AUDIO: 12000 bytes
+[75.7854s - 76.0019s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[76.0171s] RECV_AUDIO: 12000 bytes
+[76.0456s - 76.2619s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[76.2669s] RECV_AUDIO: 12000 bytes
+[76.2830s - 76.5035s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[76.5168s] RECV_AUDIO: 12000 bytes
+[76.5283s - 76.7615s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[76.7660s] RECV_AUDIO: 12000 bytes
+[76.7816s - 77.0250s] SENT: 9 packets (180ms of audio) corr=['corr-3fbf1c21']
+[77.0316s] RECV_AUDIO: 12000 bytes
+[77.1951s - 77.3089s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[77.3184s] RECV_AUDIO: 12000 bytes
+[77.3452s - 77.5419s] SENT: 16 packets (320ms of audio) corr=['corr-3fbf1c21']
+[77.5449s] RECV_AUDIO: 12000 bytes
+[77.5851s - 77.7628s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[77.7733s] RECV_AUDIO: 12000 bytes
+[77.7930s - 78.0018s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[78.0229s] RECV_AUDIO: 12000 bytes
+[78.0483s - 78.2618s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[78.2719s] RECV_AUDIO: 12000 bytes
+[78.2870s - 78.5018s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[78.5144s] RECV_AUDIO: 12000 bytes
+[78.5298s - 78.7720s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[78.7796s] RECV_AUDIO: 12000 bytes
+[78.8169s - 79.0032s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[79.0171s] RECV_AUDIO: 12000 bytes
+[79.0363s - 79.2617s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[79.2660s] RECV_AUDIO: 12000 bytes
+[79.2817s - 79.5014s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[79.5157s] RECV_AUDIO: 12000 bytes
+[79.5322s - 79.7613s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[79.7653s] RECV_AUDIO: 12000 bytes
+[79.7905s - 80.0025s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[80.0160s] RECV_AUDIO: 12000 bytes
+[80.0367s - 80.2621s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[80.2703s] RECV_AUDIO: 12000 bytes
+[80.2889s - 80.5025s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[80.5179s] RECV_AUDIO: 12000 bytes
+[80.5400s - 80.7636s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[80.7847s] RECV_AUDIO: 12000 bytes
+[80.8426s - 81.0069s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[81.0155s] RECV_AUDIO: 12000 bytes
+[81.0541s - 81.2626s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[81.2671s] RECV_AUDIO: 12000 bytes
+[81.2850s - 81.5019s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[81.5160s] RECV_AUDIO: 12000 bytes
+[81.5360s - 81.7617s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[81.7698s] RECV_AUDIO: 12000 bytes
+[81.7897s - 82.0039s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[82.0158s] RECV_AUDIO: 12000 bytes
+[82.0360s - 82.2651s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[82.2697s] RECV_AUDIO: 12000 bytes
+[82.3043s - 82.5011s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[82.5158s] RECV_AUDIO: 12000 bytes
+[82.5414s - 82.7629s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[82.7659s] RECV_AUDIO: 12000 bytes
+[82.7840s - 83.0090s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[83.0167s] RECV_AUDIO: 12000 bytes
+[83.0429s - 83.2647s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[83.2673s] RECV_AUDIO: 12000 bytes
+[83.3013s - 83.5221s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[83.5243s] RECV_AUDIO: 12000 bytes
+[83.5483s - 83.7637s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[83.7688s] RECV_AUDIO: 12000 bytes
+[83.7955s - 84.0441s] SENT: 9 packets (180ms of audio) corr=['corr-3fbf1c21']
+[84.0506s] RECV_AUDIO: 12000 bytes
+[84.1625s - 84.2668s] SENT: 16 packets (320ms of audio) corr=['corr-3fbf1c21']
+[84.2706s] RECV_AUDIO: 12000 bytes
+[84.2940s - 84.5043s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[84.5200s] RECV_AUDIO: 12000 bytes
+[84.5609s - 84.7436s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[84.7680s] RECV_AUDIO: 12000 bytes
+[84.8237s - 85.0077s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[85.0193s] RECV_AUDIO: 12000 bytes
+[85.0620s - 85.2614s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[85.2654s] RECV_AUDIO: 12000 bytes
+[85.2909s - 85.5014s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[85.5183s] RECV_AUDIO: 12000 bytes
+[85.5334s - 85.7628s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[85.7667s] RECV_AUDIO: 12000 bytes
+[85.7910s - 86.0048s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[86.0183s] RECV_AUDIO: 12000 bytes
+[86.0440s - 86.2619s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[86.2659s] RECV_AUDIO: 12000 bytes
+[86.2919s - 86.5045s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[86.5153s] RECV_AUDIO: 12000 bytes
+[86.5387s - 86.7643s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[86.7678s] RECV_AUDIO: 12000 bytes
+[86.7944s - 87.0069s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[87.0160s] RECV_AUDIO: 12000 bytes
+[87.0502s - 87.2812s] SENT: 14 packets (280ms of audio) corr=['corr-3fbf1c21']
+[87.2853s] RECV_AUDIO: 12000 bytes
+[87.3041s - 87.5035s] SENT: 11 packets (220ms of audio) corr=['corr-3fbf1c21']
+[87.5157s] RECV_AUDIO: 12000 bytes
+[87.5327s - 87.7629s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[87.7729s] RECV_AUDIO: 12000 bytes
+[87.7914s - 88.0030s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[88.0234s] RECV_AUDIO: 12000 bytes
+[88.0427s - 88.2629s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[88.2655s] RECV_AUDIO: 12000 bytes
+[88.2900s - 88.5045s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[88.5187s] RECV_AUDIO: 12000 bytes
+[88.5378s - 88.7629s] SENT: 13 packets (260ms of audio) corr=['corr-3fbf1c21']
+[88.7819s] RECV_AUDIO: 12000 bytes
+[88.8047s - 89.0037s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[89.0190s] RECV_AUDIO: 12000 bytes
+[89.0419s - 89.4877s] SENT: 6 packets (120ms of audio) corr=['corr-3fbf1c21']
+[89.5526s] RECV_AUDIO: 12000 bytes
+[89.5537s] RECV_AUDIO: 12000 bytes
+[89.6483s - 89.7692s] SENT: 32 packets (640ms of audio) corr=['corr-3fbf1c21']
+[89.7732s] RECV_AUDIO: 12000 bytes
+[89.8057s - 90.0034s] SENT: 12 packets (240ms of audio) corr=['corr-3fbf1c21']
+[90.0181s] RECV_AUDIO: 12000 bytes
+[90.0368s - 90.2612s] SENT: 13 packets (260ms of audio) corr=['corr-8ddf33d1']
+[90.2657s] RECV_AUDIO: 12000 bytes
+[90.2826s - 90.5034s] SENT: 12 packets (240ms of audio) corr=['corr-8ddf33d1']
+[90.5160s] RECV_AUDIO: 12000 bytes
+[90.5299s - 90.7668s] SENT: 13 packets (260ms of audio) corr=['corr-8ddf33d1']
+[90.7708s] RECV_AUDIO: 12000 bytes
+[90.7971s - 91.0030s] SENT: 12 packets (240ms of audio) corr=['corr-c90de400', 'corr-8ddf33d1', 'corr-84c64b6b']
+[91.0209s] RECV_AUDIO: 12000 bytes
+[91.0450s - 91.2636s] SENT: 13 packets (260ms of audio) corr=['corr-c90de400']
+[91.2695s] RECV_AUDIO: 12000 bytes
+[91.3029s - 91.5167s] SENT: 12 packets (240ms of audio) corr=['corr-c90de400']
+[91.5197s] RECV_AUDIO: 12000 bytes
+[91.5538s - 91.8090s] SENT: 11 packets (220ms of audio) corr=['corr-c90de400']
+[91.8146s] RECV_AUDIO: 12000 bytes
+[91.9528s - 92.0364s] SENT: 12 packets (240ms of audio) corr=['corr-c90de400']
+[92.0609s] RECV_AUDIO: 12000 bytes
+[92.2273s - 92.4493s] SENT: 14 packets (280ms of audio) corr=['corr-c90de400']
+[92.4523s] RECV_AUDIO: 12000 bytes
+[92.6048s - 92.6607s] SENT: 9 packets (180ms of audio) corr=['corr-c90de400']
+[92.6770s] RECV_AUDIO: 12000 bytes
+[92.6828s - 92.8986s] SENT: 11 packets (220ms of audio) corr=['corr-c90de400']
+[92.9017s] RECV_TEXT: ' Hoy es lunes.'
+[92.9060s] RECV_AUDIO: 12000 bytes
+[92.9404s - 93.0691s] SENT: 12 packets (240ms of audio) corr=['corr-c90de400']
+[93.0816s] RECV_AUDIO: 12000 bytes
+[93.1070s - 93.2653s] SENT: 14 packets (280ms of audio) corr=['corr-c90de400']
+[93.3245s] RECV_AUDIO: 12000 bytes
+[93.3270s - 93.5455s] SENT: 13 packets (260ms of audio) corr=['corr-c90de400']
+[93.5617s] RECV_AUDIO: 12000 bytes
+[93.5647s - 93.7669s] SENT: 6 packets (120ms of audio) corr=['corr-c90de400']
+[93.7791s] RECV_AUDIO: 12000 bytes
+[93.7947s - 94.0494s] SENT: 23 packets (460ms of audio) corr=['corr-c90de400']
+[94.0537s] RECV_AUDIO: 12000 bytes
+[94.2136s - 94.3167s] SENT: 7 packets (140ms of audio) corr=['corr-c90de400']
+[94.3610s] RECV_AUDIO: 12000 bytes
+[94.3729s - 94.7059s] SENT: 17 packets (340ms of audio) corr=['corr-c90de400', 'corr-275b718f']
+[94.7109s] RECV_AUDIO: 12000 bytes
+[94.7529s - 94.7841s] SENT: 7 packets (140ms of audio) corr=['corr-275b718f']
+[94.8043s] RECV_AUDIO: 12000 bytes
+[94.8135s - 95.0337s] SENT: 19 packets (380ms of audio) corr=['corr-275b718f']
+[95.0380s] RECV_AUDIO: 12000 bytes
+[95.0890s - 95.2611s] SENT: 13 packets (260ms of audio) corr=['corr-275b718f']
+[95.2689s] RECV_AUDIO: 12000 bytes
+[95.2928s - 95.5030s] SENT: 12 packets (240ms of audio) corr=['corr-275b718f']
+[95.5171s] RECV_AUDIO: 12000 bytes
+[95.5750s - 95.7625s] SENT: 13 packets (260ms of audio) corr=['corr-275b718f']
+[95.7671s] RECV_AUDIO: 12000 bytes
+[95.8120s - 96.0090s] SENT: 12 packets (240ms of audio) corr=['corr-275b718f']
+[96.0148s] RECV_AUDIO: 12000 bytes
+[96.0639s - 96.2757s] SENT: 12 packets (240ms of audio) corr=['corr-275b718f']
+[96.2857s] RECV_AUDIO: 12000 bytes
+[96.3260s - 96.5170s] SENT: 13 packets (260ms of audio) corr=['corr-275b718f']
+[96.5249s] RECV_AUDIO: 12000 bytes
+[96.6337s - 96.7654s] SENT: 13 packets (260ms of audio) corr=['corr-275b718f']
+[96.7721s] RECV_AUDIO: 12000 bytes
+[96.8067s - 97.0237s] SENT: 13 packets (260ms of audio) corr=['corr-275b718f']
+[97.0281s] RECV_AUDIO: 12000 bytes
+[97.0548s - 97.2625s] SENT: 12 packets (240ms of audio) corr=['corr-275b718f']
+[97.2697s] RECV_AUDIO: 12000 bytes
+[97.3243s - 97.5103s] SENT: 12 packets (240ms of audio) corr=['corr-275b718f']
+[97.5153s] RECV_AUDIO: 12000 bytes
+[97.5761s - 97.7623s] SENT: 13 packets (260ms of audio) corr=['corr-275b718f']
+[97.7717s] RECV_AUDIO: 12000 bytes
+[97.7966s - 98.0029s] SENT: 12 packets (240ms of audio) corr=['corr-275b718f']
+[98.0160s] RECV_AUDIO: 12000 bytes
+[98.0446s - 98.2508s] SENT: 12 packets (240ms of audio) corr=['corr-275b718f']
+[98.2709s] RECV_AUDIO: 12000 bytes
+[98.5749s] RECV_AUDIO: 12000 bytes
+[99.3218s - 99.6436s] SENT: 15 packets (300ms of audio) corr=['corr-275b718f']
+[99.8945s] RECV_AUDIO: 12000 bytes
+[99.9041s] RECV_AUDIO: 12000 bytes
+[99.9102s] RECV_AUDIO: 12000 bytes
+[99.9261s] RECV_AUDIO: 12000 bytes
+[99.9330s - 100.8397s] SENT: 52 packets (1040ms of audio) corr=['corr-275b718f']
+[100.9430s] RECV_AUDIO: 12000 bytes
+[100.9510s] RECV_AUDIO: 12000 bytes
+[100.9694s] RECV_AUDIO: 12000 bytes
+[100.9746s] RECV_AUDIO: 12000 bytes
+[100.9922s] RECV_AUDIO: 12000 bytes
+[101.0290s - 101.1269s] SENT: 17 packets (340ms of audio) corr=['corr-275b718f']
+[101.6130s] RECV_AUDIO: 12000 bytes
+[101.6186s - 101.9738s] SENT: 44 packets (880ms of audio) corr=['corr-275b718f']
+[102.0245s] RECV_AUDIO: 12000 bytes
+[102.0306s] RECV_AUDIO: 12000 bytes
+[102.0406s] RECV_AUDIO: 12000 bytes
+[102.0459s - 102.4430s] SENT: 39 packets (780ms of audio) corr=['corr-275b718f']
+[102.4625s] RECV_AUDIO: 12000 bytes
+[102.6723s - 102.7289s] SENT: 13 packets (260ms of audio) corr=['corr-275b718f']
+[102.7944s] RECV_AUDIO: 12000 bytes
+[102.7977s] RECV_AUDIO: 12000 bytes
+[102.8048s - 103.0896s] SENT: 22 packets (440ms of audio) corr=['corr-275b718f']
+[103.1643s] RECV_AUDIO: 12000 bytes
+[103.1792s - 103.4453s] SENT: 25 packets (500ms of audio) corr=['corr-275b718f']
+[103.5434s] RECV_AUDIO: 12000 bytes
+[103.5545s] RECV_AUDIO: 12000 bytes
+[103.5650s - 103.6427s] SENT: 13 packets (260ms of audio) corr=['corr-275b718f']
+[104.1588s] RECV_AUDIO: 12000 bytes
+[104.1610s - 104.8952s] SENT: 16 packets (320ms of audio) corr=['corr-275b718f']
+[105.0639s] RECV_AUDIO: 12000 bytes
+[105.0769s] RECV_AUDIO: 12000 bytes
+[105.0875s] RECV_AUDIO: 12000 bytes
+[105.0930s] RECV_AUDIO: 12000 bytes
+[105.1207s - 105.9537s] SENT: 39 packets (780ms of audio) corr=['corr-275b718f']
+[105.9602s] RECV_AUDIO: 12000 bytes
+[105.9634s] RECV_AUDIO: 12000 bytes
+[105.9700s] RECV_AUDIO: 12000 bytes
+[106.7618s - 106.9951s] SENT: 30 packets (600ms of audio) corr=['corr-275b718f']
+[107.1638s] RECV_AUDIO: 12000 bytes
+[107.1727s] RECV_AUDIO: 12000 bytes
+[107.1794s] RECV_AUDIO: 12000 bytes
+[107.2049s] RECV_AUDIO: 12000 bytes
+[107.2155s - 107.9221s] SENT: 44 packets (880ms of audio) corr=['corr-275b718f']
+[108.4333s] RECV_AUDIO: 12000 bytes
+[108.4460s] RECV_AUDIO: 12000 bytes
+[108.4541s] RECV_AUDIO: 12000 bytes
+[108.4759s] RECV_AUDIO: 12000 bytes
+[108.4941s - 108.7601s] SENT: 36 packets (720ms of audio) corr=['corr-275b718f']
+[109.7137s] RECV_AUDIO: 12000 bytes
+[109.7302s] RECV_AUDIO: 12000 bytes
+[109.7433s] RECV_AUDIO: 12000 bytes
+[109.7818s] RECV_AUDIO: 12000 bytes
+[109.7932s] RECV_AUDIO: 12000 bytes
+[109.8099s - 111.1575s] SENT: 64 packets (1280ms of audio) corr=['corr-275b718f']
+[111.7219s] RECV_AUDIO: 12000 bytes
+[111.7271s] RECV_AUDIO: 12000 bytes
+[111.7417s] RECV_AUDIO: 12000 bytes
+[111.7938s] RECV_AUDIO: 12000 bytes
+[111.8379s] RECV_AUDIO: 12000 bytes
+[111.8405s] RECV_AUDIO: 12000 bytes
+[111.8445s] RECV_AUDIO: 12000 bytes
+[111.8741s - 114.6781s] SENT: 103 packets (2060ms of audio) corr=['corr-275b718f']
+[114.7260s] RECV_AUDIO: 12000 bytes
+[114.7389s] RECV_AUDIO: 12000 bytes
+[114.7449s] RECV_AUDIO: 12000 bytes
+[114.7586s] RECV_AUDIO: 12000 bytes
+[114.7632s] RECV_AUDIO: 12000 bytes
+[114.7768s] RECV_AUDIO: 12000 bytes
+[114.7890s] RECV_AUDIO: 12000 bytes
+[114.7921s] RECV_AUDIO: 12000 bytes
+[115.6273s - 116.0039s] SENT: 55 packets (1100ms of audio) corr=['corr-275b718f']
+[116.6370s] RECV_AUDIO: 12000 bytes
+[116.6426s] RECV_AUDIO: 12000 bytes
+[116.6505s] RECV_AUDIO: 12000 bytes
+[116.6543s] RECV_AUDIO: 12000 bytes
+[116.6569s] RECV_AUDIO: 12000 bytes
+[116.6660s] RECV_AUDIO: 12000 bytes
+[116.6770s] RECV_AUDIO: 12000 bytes
+[116.6841s] RECV_AUDIO: 12000 bytes
+[116.6892s - 118.4052s] SENT: 153 packets (3060ms of audio) corr=['corr-6605776a', 'corr-275b718f']
+[118.4860s] RECV_AUDIO: 12000 bytes
+[118.4896s] RECV_AUDIO: 12000 bytes
+[118.4934s] RECV_AUDIO: 12000 bytes
+[118.4973s] RECV_AUDIO: 12000 bytes
+[118.5033s] RECV_AUDIO: 12000 bytes
+[118.5121s] RECV_AUDIO: 12000 bytes
+[118.5218s] RECV_AUDIO: 12000 bytes
+[118.5441s] RECV_AUDIO: 12000 bytes
+[118.5628s - 119.8001s] SENT: 102 packets (2040ms of audio) corr=['corr-d6665cce', 'corr-6605776a']
+[119.8146s] RECV_AUDIO: 12000 bytes
+[119.8197s] RECV_AUDIO: 12000 bytes
+[119.8217s] RECV_AUDIO: 12000 bytes
+[119.8257s] RECV_AUDIO: 12000 bytes
+[119.8272s] RECV_AUDIO: 12000 bytes
+[119.8388s] RECV_AUDIO: 12000 bytes
+[119.8413s] RECV_AUDIO: 12000 bytes
+[119.8456s] RECV_AUDIO: 12000 bytes
+[120.3738s - 120.3788s] SENT: 3 packets (60ms of audio) corr=['corr-d6665cce']
+[120.5288s] RECV_AUDIO: 12000 bytes
+[120.5434s] RECV_AUDIO: 12000 bytes
+[120.5508s] RECV_AUDIO: 12000 bytes
+[120.5619s] RECV_AUDIO: 12000 bytes
+[120.5709s] RECV_AUDIO: 12000 bytes
+[120.5729s] RECV_AUDIO: 12000 bytes
+[120.5767s] RECV_AUDIO: 12000 bytes
+[120.6077s - 122.1103s] SENT: 91 packets (1820ms of audio) corr=['corr-d6665cce', 'corr-56e01268', 'corr-40efe5ec', 'corr-a81528fb', 'corr-686df987', 'corr-1edd7fda']
+[123.1435s] RECV_AUDIO: 12000 bytes
+[123.1538s] RECV_AUDIO: 12000 bytes
+[123.1568s] RECV_AUDIO: 12000 bytes
+[123.1588s] RECV_AUDIO: 12000 bytes
+[123.1707s] RECV_AUDIO: 12000 bytes
+[123.1875s - 126.7771s] SENT: 101 packets (2020ms of audio) corr=['corr-aa55fee3', 'corr-80cf279d', 'corr-21d85331', 'corr-1edd7fda']
+[126.8787s] RECV_AUDIO: 12000 bytes
+[126.9611s] RECV_AUDIO: 12000 bytes
+[126.9940s] RECV_AUDIO: 12000 bytes
+[127.0407s] RECV_AUDIO: 12000 bytes
+[127.1286s] RECV_AUDIO: 12000 bytes
+[127.2058s] RECV_AUDIO: 12000 bytes
+[127.2252s] RECV_AUDIO: 12000 bytes
+[127.2593s] RECV_AUDIO: 12000 bytes
+[127.2699s] RECV_TEXT: ' Hola.'
+[131.8883s - 132.0438s] SENT: 12 packets (240ms of audio) corr=['corr-aa55fee3']
+[132.6256s] RECV_AUDIO: 12000 bytes
+[132.6288s] RECV_AUDIO: 12000 bytes
+[132.6380s] RECV_AUDIO: 12000 bytes
+[132.6744s] RECV_AUDIO: 12000 bytes
+[132.6888s] RECV_AUDIO: 12000 bytes
+[132.6920s] RECV_AUDIO: 12000 bytes
+[132.6969s] RECV_AUDIO: 12000 bytes
+[132.7042s] RECV_TEXT: ' Hola a todos.'
+[132.7098s] RECV_AUDIO: 12000 bytes
+[132.7601s - 134.5776s] SENT: 103 packets (2060ms of audio) corr=['corr-aa55fee3']
+[134.5879s] RECV_AUDIO: 12000 bytes
+[134.5926s] RECV_AUDIO: 12000 bytes
+[134.6020s] RECV_AUDIO: 12000 bytes
+[134.6255s] RECV_TEXT: ' Hoy vamos'
+[134.6442s] RECV_AUDIO: 12000 bytes
+[134.6944s] RECV_AUDIO: 12000 bytes
+[134.7068s] RECV_AUDIO: 12000 bytes
+[134.7271s] RECV_AUDIO: 12000 bytes
+[134.7373s] RECV_TEXT: ' a discutir'
+[134.7611s] RECV_AUDIO: 12000 bytes
+[138.5079s - 139.0779s] SENT: 100 packets (2000ms of audio) corr=['corr-aa55fee3']
+[139.0919s] RECV_AUDIO: 12000 bytes
+[139.0953s] RECV_AUDIO: 12000 bytes
+[139.1186s] RECV_AUDIO: 12000 bytes
+[139.1427s] RECV_AUDIO: 12000 bytes
+[139.1508s] RECV_AUDIO: 12000 bytes
+[139.1543s] RECV_AUDIO: 12000 bytes
+[139.1675s] RECV_AUDIO: 12000 bytes
+[139.1908s] RECV_AUDIO: 12000 bytes
+[141.5687s - 141.6198s] SENT: 3 packets (60ms of audio) corr=['corr-aa55fee3']
+[144.3262s] RECV_AUDIO: 12000 bytes
+[144.3435s] RECV_AUDIO: 12000 bytes
+[144.3625s] RECV_AUDIO: 12000 bytes
+[144.3728s] RECV_AUDIO: 12000 bytes
+[144.3773s] RECV_AUDIO: 12000 bytes
+[144.3855s] RECV_AUDIO: 12000 bytes
+[144.3892s] RECV_AUDIO: 12000 bytes
+[144.4053s] RECV_AUDIO: 12000 bytes
+[144.7420s - 145.3555s] SENT: 100 packets (2000ms of audio) corr=['corr-aa55fee3']
+[146.2690s] RECV_AUDIO: 12000 bytes
+[146.2755s] RECV_AUDIO: 12000 bytes
+[146.2870s] RECV_AUDIO: 12000 bytes
+[146.2897s] RECV_AUDIO: 12000 bytes
+[146.2947s] RECV_AUDIO: 12000 bytes
+[146.3211s] RECV_TEXT: ' Sí.'
+[146.3280s] RECV_AUDIO: 12000 bytes
+[146.3510s] RECV_AUDIO: 12000 bytes
+[146.3561s] RECV_AUDIO: 12000 bytes
+[146.3617s - 150.0727s] SENT: 103 packets (2060ms of audio) corr=['corr-aa55fee3']
+[150.0938s] RECV_AUDIO: 12000 bytes
+[150.1050s] RECV_AUDIO: 12000 bytes
+[150.1083s] RECV_AUDIO: 12000 bytes
+[150.1114s] RECV_AUDIO: 12000 bytes
+[150.1207s] RECV_AUDIO: 12000 bytes
+[150.1237s] RECV_AUDIO: 12000 bytes
+[150.1355s] RECV_AUDIO: 12000 bytes
+[150.1446s] RECV_AUDIO: 12000 bytes
+[150.4398s - 150.6869s] SENT: 84 packets (1680ms of audio) corr=['corr-aa55fee3']
+[150.6920s] RECV_AUDIO: 12000 bytes
+[150.7156s] RECV_TEXT: ' Empecemos.'
+[150.7231s] RECV_AUDIO: 12000 bytes
+[150.7271s] RECV_AUDIO: 12000 bytes
+[150.7344s] RECV_AUDIO: 12000 bytes
+[150.7399s] RECV_AUDIO: 12000 bytes
+[150.7444s] RECV_AUDIO: 12000 bytes
+[150.7543s] RECV_AUDIO: 12000 bytes
+[150.7740s] RECV_AUDIO: 12000 bytes
+[151.6391s - 151.7218s] SENT: 18 packets (360ms of audio) corr=['corr-aa55fee3']
+[152.4895s] RECV_AUDIO: 12000 bytes
+[152.4930s] RECV_AUDIO: 12000 bytes
+[152.4950s] RECV_AUDIO: 12000 bytes
+[152.5117s] RECV_AUDIO: 12000 bytes
+[152.5274s] RECV_AUDIO: 12000 bytes
+[152.5329s] RECV_AUDIO: 12000 bytes
+[152.5360s] RECV_AUDIO: 12000 bytes
+[152.5392s] RECV_AUDIO: 12000 bytes
+[152.5524s - 153.5213s] SENT: 103 packets (2060ms of audio) corr=['corr-aa55fee3']
+[153.5895s] RECV_AUDIO: 12000 bytes
+[153.6014s] RECV_AUDIO: 12000 bytes
+[153.6094s] RECV_AUDIO: 12000 bytes
+[153.6117s] RECV_AUDIO: 12000 bytes
+[153.6206s] RECV_AUDIO: 12000 bytes
+[153.6231s] RECV_AUDIO: 12000 bytes
+[153.6276s] RECV_AUDIO: 12000 bytes
+[153.6312s] RECV_AUDIO: 12000 bytes
+[154.3256s - 154.8568s] SENT: 100 packets (2000ms of audio) corr=['corr-aa55fee3']
+[154.8745s] RECV_AUDIO: 12000 bytes
+[154.8833s] RECV_AUDIO: 12000 bytes
+[154.8877s] RECV_AUDIO: 12000 bytes
+[154.8903s] RECV_AUDIO: 12000 bytes
+[154.8933s] RECV_AUDIO: 12000 bytes
+[154.8943s] RECV_AUDIO: 12000 bytes
+[154.9045s] RECV_AUDIO: 12000 bytes
+[154.9080s] RECV_AUDIO: 12000 bytes
+[154.9105s] RECV_AUDIO: 12000 bytes
+[156.1968s - 156.7216s] SENT: 46 packets (920ms of audio) corr=['corr-aa55fee3']
+[156.8693s] RECV_AUDIO: 12000 bytes
+[156.8761s] RECV_AUDIO: 12000 bytes
+[156.8871s] RECV_AUDIO: 12000 bytes
+[156.8952s] RECV_AUDIO: 12000 bytes
+[156.9178s] RECV_AUDIO: 12000 bytes
+[156.9360s] RECV_AUDIO: 12000 bytes
+[156.9574s] RECV_AUDIO: 12000 bytes
+[156.9773s] RECV_AUDIO: 12000 bytes
+[157.1310s - 157.1860s] SENT: 10 packets (200ms of audio) corr=['corr-aa55fee3']
+[157.8371s] RECV_AUDIO: 12000 bytes
+[157.8427s] RECV_AUDIO: 12000 bytes
+[157.8543s] RECV_AUDIO: 12000 bytes
+[157.8590s] RECV_AUDIO: 12000 bytes
+[157.8761s] RECV_AUDIO: 12000 bytes
+[157.8889s] RECV_AUDIO: 12000 bytes
+[157.8949s] RECV_AUDIO: 12000 bytes
+[157.9073s] RECV_AUDIO: 12000 bytes
+[157.9173s - 159.1604s] SENT: 125 packets (2500ms of audio) corr=['corr-aa55fee3']
+[159.4776s] RECV_AUDIO: 12000 bytes
+[159.4902s] RECV_AUDIO: 12000 bytes
+[159.4932s] RECV_AUDIO: 12000 bytes
+[159.4998s] RECV_AUDIO: 12000 bytes
+[159.5042s] RECV_AUDIO: 12000 bytes
+[159.5090s] RECV_AUDIO: 12000 bytes
+[159.5207s] RECV_AUDIO: 12000 bytes
+[159.5238s] RECV_AUDIO: 12000 bytes
+[159.5349s - 160.1371s] SENT: 83 packets (1660ms of audio) corr=['corr-aa55fee3']
+[160.1424s] RECV_AUDIO: 12000 bytes
+[160.1454s] RECV_AUDIO: 12000 bytes
+[160.1514s] RECV_AUDIO: 12000 bytes
+[160.1549s] RECV_AUDIO: 12000 bytes
+[160.1670s] RECV_AUDIO: 12000 bytes
+[160.1719s] RECV_AUDIO: 12000 bytes
+[160.1761s] RECV_AUDIO: 12000 bytes
+[160.1798s] RECV_AUDIO: 12000 bytes
+[160.4146s - 160.5167s] SENT: 23 packets (460ms of audio) corr=['corr-aa55fee3']
+[160.6411s] RECV_AUDIO: 12000 bytes
+[160.6522s] RECV_AUDIO: 12000 bytes
+[160.6548s] RECV_AUDIO: 12000 bytes
+[160.6568s] RECV_AUDIO: 12000 bytes
+[160.6588s] RECV_AUDIO: 12000 bytes
+[160.6608s] RECV_AUDIO: 12000 bytes
+[160.6658s] RECV_AUDIO: 12000 bytes
+[160.6719s] RECV_AUDIO: 12000 bytes
+[160.6854s - 161.2131s] SENT: 85 packets (1700ms of audio) corr=['corr-aa55fee3']
+[161.2901s] RECV_AUDIO: 12000 bytes
+[161.2925s] RECV_AUDIO: 12000 bytes
+[161.2955s] RECV_AUDIO: 12000 bytes
+[161.3021s] RECV_AUDIO: 12000 bytes
+[161.3054s] RECV_AUDIO: 12000 bytes
+[161.3111s] RECV_AUDIO: 12000 bytes
+[161.3249s] RECV_AUDIO: 12000 bytes
+[161.3274s] RECV_AUDIO: 12000 bytes
+[161.3446s - 161.3936s] SENT: 12 packets (240ms of audio) corr=['corr-aa55fee3']
+[162.4332s] RECV_AUDIO: 12000 bytes
+[162.4357s] RECV_AUDIO: 12000 bytes
+[162.4399s] RECV_AUDIO: 12000 bytes
+[162.4439s] RECV_AUDIO: 12000 bytes
+[162.4499s] RECV_AUDIO: 12000 bytes
+[162.4610s] RECV_AUDIO: 12000 bytes
+[162.4721s] RECV_AUDIO: 12000 bytes
+[162.4823s] RECV_AUDIO: 12000 bytes
+[162.4862s - 163.5500s] SENT: 44 packets (880ms of audio) corr=['corr-aa55fee3']
+[163.6519s] RECV_AUDIO: 12000 bytes
+[163.6560s] RECV_AUDIO: 12000 bytes
+[163.6688s] RECV_AUDIO: 12000 bytes
+[163.6746s] RECV_AUDIO: 12000 bytes
+[163.6782s] RECV_AUDIO: 12000 bytes
+[163.6925s] RECV_AUDIO: 12000 bytes
+[163.7083s] RECV_AUDIO: 12000 bytes
+[163.7130s] RECV_AUDIO: 12000 bytes
+[163.7243s - 164.6177s] SENT: 65 packets (1300ms of audio) corr=['corr-aa55fee3']
+[164.6232s] RECV_AUDIO: 12000 bytes
+[164.6277s] RECV_AUDIO: 12000 bytes
+[164.6334s] RECV_AUDIO: 12000 bytes
+[164.6390s] RECV_AUDIO: 12000 bytes
+[164.6505s] RECV_AUDIO: 12000 bytes
+[164.6670s] RECV_AUDIO: 12000 bytes
+[164.6720s] RECV_AUDIO: 12000 bytes
+[164.6800s] RECV_AUDIO: 12000 bytes
+[165.1108s - 165.1861s] SENT: 14 packets (280ms of audio) corr=['corr-aa55fee3', 'corr-4ca2e591']
+[165.2739s] RECV_AUDIO: 12000 bytes
+[165.2769s] RECV_AUDIO: 12000 bytes
+[165.2948s] RECV_AUDIO: 12000 bytes
+[165.3039s] RECV_AUDIO: 12000 bytes
+[165.3181s] RECV_AUDIO: 12000 bytes
+[165.3211s] RECV_AUDIO: 12000 bytes
+[165.3259s] RECV_AUDIO: 12000 bytes
+[165.3335s] RECV_AUDIO: 12000 bytes
+[165.3370s - 166.2151s] SENT: 84 packets (1680ms of audio) corr=['corr-4ca2e591']
+[166.2574s] RECV_AUDIO: 12000 bytes
+[166.2609s] RECV_AUDIO: 12000 bytes
+[166.2691s] RECV_AUDIO: 12000 bytes
+[166.2721s] RECV_AUDIO: 12000 bytes
+[166.2754s] RECV_AUDIO: 12000 bytes
+[166.2832s] RECV_AUDIO: 12000 bytes
+[166.2867s] RECV_AUDIO: 12000 bytes
+[166.2888s] RECV_AUDIO: 12000 bytes
+[166.2968s - 166.4046s] SENT: 17 packets (340ms of audio) corr=['corr-4ca2e591']
+[166.8869s] RECV_AUDIO: 12000 bytes
+[166.8896s] RECV_AUDIO: 12000 bytes
+[166.8920s] RECV_AUDIO: 12000 bytes
+[166.8931s - 167.1998s] SENT: 41 packets (820ms of audio) corr=['corr-4ca2e591']
+[167.4989s] RECV_AUDIO: 12000 bytes
+[167.5053s] RECV_AUDIO: 12000 bytes
+[167.5270s] RECV_AUDIO: 12000 bytes
+[167.5330s - 168.8753s] SENT: 67 packets (1340ms of audio) corr=['corr-4ca2e591']
+[168.9559s] RECV_AUDIO: 12000 bytes
+[168.9639s] RECV_AUDIO: 12000 bytes
+[168.9689s] RECV_AUDIO: 12000 bytes
+[168.9729s] RECV_AUDIO: 12000 bytes
+[168.9760s] RECV_AUDIO: 12000 bytes
+[168.9845s - 169.5208s] SENT: 31 packets (620ms of audio) corr=['corr-4ca2e591', 'corr-eddec544']
+[169.5542s] RECV_AUDIO: 12000 bytes
+[169.5581s] RECV_AUDIO: 12000 bytes
+[169.5683s] RECV_AUDIO: 12000 bytes
+[170.5257s - 170.7771s] SENT: 49 packets (980ms of audio) corr=['corr-eddec544']
+[170.9241s] RECV_AUDIO: 12000 bytes
+[170.9348s] RECV_AUDIO: 12000 bytes
+[170.9691s] RECV_AUDIO: 12000 bytes
+[170.9724s] RECV_AUDIO: 12000 bytes
+[170.9760s] RECV_AUDIO: 12000 bytes
+[170.9889s - 171.7663s] SENT: 46 packets (920ms of audio) corr=['corr-eddec544']
+[171.8849s] RECV_AUDIO: 12000 bytes
+[171.8922s] RECV_AUDIO: 12000 bytes
+[171.9012s] RECV_AUDIO: 12000 bytes
+[171.9390s - 172.6669s] SENT: 75 packets (1500ms of audio) corr=['corr-eddec544']
+[172.6713s] RECV_AUDIO: 12000 bytes
+[172.6760s] RECV_TEXT: ' Entonces,'
+[172.6801s] RECV_AUDIO: 12000 bytes
+[172.6898s] RECV_AUDIO: 12000 bytes
+[172.7038s] RECV_AUDIO: 12000 bytes
+[172.7236s] RECV_AUDIO: 12000 bytes
+[173.0555s - 173.1547s] SENT: 16 packets (320ms of audio) corr=['corr-eddec544']
+[173.4480s] RECV_AUDIO: 12000 bytes
+[173.4554s] RECV_AUDIO: 12000 bytes
+[173.4579s - 174.1055s] SENT: 64 packets (1280ms of audio) corr=['corr-eddec544']
+[174.2420s] RECV_AUDIO: 12000 bytes
+[174.2471s] RECV_AUDIO: 12000 bytes
+[174.2557s] RECV_AUDIO: 12000 bytes
+[174.2709s - 174.3842s] SENT: 15 packets (300ms of audio) corr=['corr-eddec544']
+[175.2537s] RECV_AUDIO: 12000 bytes
+[175.2566s] RECV_AUDIO: 12000 bytes
+[175.2676s] RECV_AUDIO: 12000 bytes
+[175.2728s - 175.7320s] SENT: 53 packets (1060ms of audio) corr=['corr-eddec544']
+[175.8611s] RECV_AUDIO: 12000 bytes
+[175.8772s] RECV_AUDIO: 12000 bytes
+[175.8890s] RECV_AUDIO: 12000 bytes
+[175.8923s] RECV_AUDIO: 12000 bytes
+[175.9173s - 176.6890s] SENT: 70 packets (1400ms of audio) corr=['corr-eddec544']
+[176.6939s] RECV_AUDIO: 12000 bytes
+[176.7017s] RECV_AUDIO: 12000 bytes
+[176.7158s] RECV_AUDIO: 12000 bytes
+[176.9569s - 177.0771s] SENT: 17 packets (340ms of audio) corr=['corr-eddec544']
+[177.1898s] RECV_AUDIO: 12000 bytes
+[177.2147s] RECV_AUDIO: 12000 bytes
+[177.2272s] RECV_AUDIO: 12000 bytes
+[177.2404s - 177.8726s] SENT: 40 packets (800ms of audio) corr=['corr-eddec544']
+[178.2228s] RECV_AUDIO: 12000 bytes
+[178.2267s] RECV_AUDIO: 12000 bytes
+[178.2500s - 178.4127s] SENT: 19 packets (380ms of audio) corr=['corr-eddec544']
+[178.7911s] RECV_AUDIO: 12000 bytes
+[178.8419s] RECV_AUDIO: 12000 bytes
+[178.8771s] RECV_AUDIO: 12000 bytes
+[178.8986s] RECV_AUDIO: 12000 bytes
+[178.9211s - 179.5544s] SENT: 42 packets (840ms of audio) corr=['corr-eddec544']
+[180.2320s] RECV_AUDIO: 12000 bytes
+[180.2424s] RECV_AUDIO: 12000 bytes
+[180.2539s] RECV_AUDIO: 12000 bytes
+[180.2597s] RECV_AUDIO: 12000 bytes
+[180.2854s - 180.8399s] SENT: 57 packets (1140ms of audio) corr=['corr-eddec544']
+[180.8435s] RECV_AUDIO: 12000 bytes
+[180.8546s] RECV_AUDIO: 12000 bytes
+[180.8577s] RECV_AUDIO: 12000 bytes
+[180.8598s] RECV_AUDIO: 12000 bytes
+[180.8699s] RECV_AUDIO: 12000 bytes
+[181.2884s - 181.4061s] SENT: 25 packets (500ms of audio) corr=['corr-eddec544']
+[181.5549s] RECV_AUDIO: 12000 bytes
+[181.5604s - 181.9725s] SENT: 73 packets (1460ms of audio) corr=['corr-eddec544']
+[182.0901s] RECV_AUDIO: 12000 bytes
+[182.0934s] RECV_AUDIO: 12000 bytes
+[182.1050s] RECV_AUDIO: 12000 bytes
+[182.1091s] RECV_AUDIO: 12000 bytes
+[182.1422s - 182.2198s] SENT: 12 packets (240ms of audio) corr=['corr-eddec544']
+[182.6369s] RECV_AUDIO: 12000 bytes
+[182.6422s - 182.9264s] SENT: 44 packets (880ms of audio) corr=['corr-eddec544']
+[182.9940s] RECV_AUDIO: 12000 bytes
+[183.0046s] RECV_AUDIO: 12000 bytes
+[183.0123s] RECV_AUDIO: 12000 bytes
+[183.0211s - 183.5807s] SENT: 51 packets (1020ms of audio) corr=['corr-eddec544']
+[183.5931s] RECV_AUDIO: 12000 bytes
+[183.6075s] RECV_AUDIO: 12000 bytes
+[183.8528s - 183.9856s] SENT: 8 packets (160ms of audio) corr=['corr-eddec544']
+[184.4243s] RECV_AUDIO: 12000 bytes
+[184.4372s - 184.6454s] SENT: 24 packets (480ms of audio) corr=['corr-eddec544']
+[184.8042s] RECV_AUDIO: 12000 bytes
+[184.8069s] RECV_AUDIO: 12000 bytes
+[184.8351s] RECV_AUDIO: 12000 bytes
+[184.8400s] RECV_AUDIO: 12000 bytes
+[184.8451s - 184.8887s] SENT: 10 packets (200ms of audio) corr=['corr-eddec544']
+[185.0731s] RECV_AUDIO: 12000 bytes
+[185.0759s - 185.3742s] SENT: 44 packets (880ms of audio) corr=['corr-eddec544']
+[185.4396s] RECV_AUDIO: 12000 bytes
+[185.4430s] RECV_AUDIO: 12000 bytes
+[185.4515s - 185.9700s] SENT: 42 packets (840ms of audio) corr=['corr-eddec544']
+[186.0393s] RECV_AUDIO: 12000 bytes
+[186.0546s] RECV_AUDIO: 12000 bytes
+[186.0597s - 186.3211s] SENT: 20 packets (400ms of audio) corr=['corr-eddec544']
+[186.3658s] RECV_AUDIO: 12000 bytes
+[186.3724s] RECV_AUDIO: 12000 bytes
+[186.3754s - 187.0273s] SENT: 27 packets (540ms of audio) corr=['corr-eddec544']
+[187.0751s] RECV_AUDIO: 12000 bytes
+[187.1029s] RECV_AUDIO: 12000 bytes
+[187.1239s - 187.4089s] SENT: 28 packets (560ms of audio) corr=['corr-eddec544']
+[187.4431s] RECV_AUDIO: 12000 bytes
+[187.4521s] RECV_AUDIO: 12000 bytes
+[187.4540s - 187.8439s] SENT: 25 packets (500ms of audio) corr=['corr-eddec544']
+[187.8599s] RECV_AUDIO: 12000 bytes
+[187.8635s] RECV_AUDIO: 12000 bytes
+[187.8699s - 188.3921s] SENT: 19 packets (380ms of audio) corr=['corr-eddec544']
+[188.4388s] RECV_AUDIO: 12000 bytes
+[188.4432s] RECV_AUDIO: 12000 bytes
+[188.4559s - 189.6709s] SENT: 32 packets (640ms of audio) corr=['corr-eddec544']
+[189.9410s] RECV_AUDIO: 12000 bytes
+[189.9715s] RECV_AUDIO: 12000 bytes
+[189.9746s] RECV_AUDIO: 12000 bytes
+[189.9767s] RECV_AUDIO: 12000 bytes
+[189.9818s] RECV_AUDIO: 12000 bytes
+[189.9890s - 190.1439s] SENT: 24 packets (480ms of audio) corr=['corr-eddec544']
+[190.6521s] RECV_AUDIO: 12000 bytes
+[190.6711s] RECV_AUDIO: 12000 bytes
+[190.6752s - 190.9908s] SENT: 35 packets (700ms of audio) corr=['corr-eddec544']
+[191.0279s] RECV_AUDIO: 12000 bytes
+[191.0404s] RECV_AUDIO: 12000 bytes
+[191.0439s] RECV_AUDIO: 12000 bytes
+[191.0552s - 191.6946s] SENT: 51 packets (1020ms of audio) corr=['corr-eddec544']
+[191.7190s] RECV_AUDIO: 12000 bytes
+[192.0029s - 192.0956s] SENT: 13 packets (260ms of audio) corr=['corr-eddec544']
+[192.1741s] RECV_AUDIO: 12000 bytes
+[192.1791s] RECV_AUDIO: 12000 bytes
+[192.1928s] RECV_AUDIO: 12000 bytes
+[192.2119s - 192.8061s] SENT: 25 packets (500ms of audio) corr=['corr-eddec544']
+[192.8608s] RECV_AUDIO: 12000 bytes
+[192.8689s] RECV_AUDIO: 12000 bytes
+[192.8749s - 192.9667s] SENT: 21 packets (420ms of audio) corr=['corr-eddec544']
+[193.2041s] RECV_AUDIO: 12000 bytes
+[193.2057s] RECV_AUDIO: 12000 bytes
+[193.2220s - 193.7702s] SENT: 53 packets (1060ms of audio) corr=['corr-eddec544']
+[193.7752s] RECV_AUDIO: 12000 bytes
+[193.8081s] RECV_AUDIO: 12000 bytes
+[193.8219s] RECV_AUDIO: 12000 bytes
+[194.4555s - 194.5850s] SENT: 16 packets (320ms of audio) corr=['corr-eddec544']
+[194.6686s] RECV_AUDIO: 12000 bytes
+[194.6746s] RECV_AUDIO: 12000 bytes
+[194.6888s - 195.0228s] SENT: 25 packets (500ms of audio) corr=['corr-eddec544']
+[195.1061s] RECV_AUDIO: 12000 bytes
+[195.1095s] RECV_AUDIO: 12000 bytes
+[195.1190s] RECV_AUDIO: 12000 bytes
+[195.1254s - 195.2197s] SENT: 18 packets (360ms of audio) corr=['corr-eddec544']
+[195.3555s] RECV_AUDIO: 12000 bytes
+[195.3626s - 195.7608s] SENT: 45 packets (900ms of audio) corr=['corr-eddec544']
+[195.7871s] RECV_AUDIO: 12000 bytes
+[195.7930s] RECV_AUDIO: 12000 bytes
+[195.8204s - 195.9733s] SENT: 20 packets (400ms of audio) corr=['corr-eddec544']
+[196.0943s] RECV_AUDIO: 12000 bytes
+[196.1018s - 196.2468s] SENT: 26 packets (520ms of audio) corr=['corr-eddec544']
+[196.3241s] RECV_AUDIO: 12000 bytes
+[196.3421s - 196.4550s] SENT: 15 packets (300ms of audio) corr=['corr-eddec544']
+[196.4769s] RECV_AUDIO: 12000 bytes
+[196.4856s - 196.6098s] SENT: 13 packets (260ms of audio) corr=['corr-eddec544']
+[196.6311s] RECV_AUDIO: 12000 bytes
+[196.6380s - 196.7919s] SENT: 12 packets (240ms of audio) corr=['corr-eddec544']
+[196.8156s] RECV_AUDIO: 12000 bytes
+[196.8218s - 197.1866s] SENT: 15 packets (300ms of audio) corr=['corr-eddec544']
+[197.1914s] RECV_AUDIO: 12000 bytes
+[197.2931s - 197.3918s] SENT: 9 packets (180ms of audio) corr=['corr-eddec544']
+[197.4319s] RECV_AUDIO: 12000 bytes
+[197.4356s - 197.7230s] SENT: 11 packets (220ms of audio) corr=['corr-eddec544']
+[197.7528s] RECV_AUDIO: 12000 bytes
+[197.7573s - 197.9536s] SENT: 16 packets (320ms of audio) corr=['corr-ec583ec6', 'corr-eddec544']
+[197.9743s] RECV_AUDIO: 12000 bytes
+[197.9798s - 198.2079s] SENT: 14 packets (280ms of audio) corr=['corr-ec583ec6', 'corr-250cc928']
+[198.2110s] RECV_AUDIO: 12000 bytes
+[198.2744s - 198.2851s] SENT: 5 packets (100ms of audio) corr=['corr-250cc928', 'corr-933b62a2']
+[198.3742s] RECV_AUDIO: 12000 bytes
+[198.3768s - 198.5600s] SENT: 6 packets (120ms of audio) corr=['corr-933b62a2']
+[198.7138s] RECV_AUDIO: 12000 bytes
+[198.7740s - 199.0423s] SENT: 22 packets (440ms of audio) corr=['corr-933b62a2']
+[199.0718s] RECV_AUDIO: 12000 bytes
+[199.0748s] RECV_AUDIO: 12000 bytes
+[199.0904s - 199.3734s] SENT: 22 packets (440ms of audio) corr=['corr-933b62a2']
+[199.4303s] RECV_AUDIO: 12000 bytes
+[199.4347s - 199.6600s] SENT: 17 packets (340ms of audio) corr=['corr-933b62a2']
+[199.6748s] RECV_AUDIO: 12000 bytes
+[199.6909s - 199.9457s] SENT: 11 packets (220ms of audio) corr=['corr-933b62a2']
+[199.9619s] RECV_AUDIO: 12000 bytes
+[199.9668s - 200.2582s] SENT: 15 packets (300ms of audio) corr=['corr-933b62a2']
+[200.2931s] RECV_AUDIO: 12000 bytes
+[200.3088s - 200.3088s] SENT: 1 packets (20ms of audio) corr=['corr-933b62a2']
+[200.3661s] RECV_AUDIO: 12000 bytes
+[200.3737s - 200.6074s] SENT: 20 packets (400ms of audio) corr=['corr-933b62a2']
+[200.6310s] RECV_AUDIO: 12000 bytes
+[200.6576s - 200.8672s] SENT: 16 packets (320ms of audio) corr=['corr-933b62a2']
+[200.9074s] RECV_AUDIO: 12000 bytes
+[200.9120s - 201.0726s] SENT: 13 packets (260ms of audio) corr=['corr-933b62a2']
+[201.0836s] RECV_AUDIO: 12000 bytes
+[201.1071s - 201.3087s] SENT: 13 packets (260ms of audio) corr=['corr-933b62a2']
+[201.3255s] RECV_AUDIO: 12000 bytes
+[201.3292s - 201.5512s] SENT: 14 packets (280ms of audio) corr=['corr-933b62a2']
+[201.5829s] RECV_AUDIO: 12000 bytes
+[201.6256s - 201.8276s] SENT: 13 packets (260ms of audio) corr=['corr-933b62a2']
+[201.8345s] RECV_AUDIO: 12000 bytes
+[201.9240s - 202.0834s] SENT: 9 packets (180ms of audio) corr=['corr-933b62a2']
+[202.1169s] RECV_AUDIO: 12000 bytes
+[202.1190s - 202.4044s] SENT: 12 packets (240ms of audio) corr=['corr-933b62a2']
+[202.4754s] RECV_AUDIO: 12000 bytes
+[202.4779s - 202.5943s] SENT: 12 packets (240ms of audio) corr=['corr-933b62a2']
+[202.6199s] RECV_AUDIO: 12000 bytes
+[202.6220s - 203.0072s] SENT: 17 packets (340ms of audio) corr=['corr-933b62a2']
+[203.0326s] RECV_AUDIO: 12000 bytes
+[203.0408s - 203.2057s] SENT: 11 packets (220ms of audio) corr=['corr-933b62a2']
+[203.2147s] RECV_AUDIO: 12000 bytes
+[203.2261s - 203.6219s] SENT: 13 packets (260ms of audio) corr=['corr-933b62a2']
+[203.6534s] RECV_AUDIO: 12000 bytes
+[203.6694s] RECV_AUDIO: 12000 bytes
+[203.6711s - 203.9004s] SENT: 21 packets (420ms of audio) corr=['corr-933b62a2']
+[203.9254s] RECV_AUDIO: 12000 bytes
+[203.9397s - 204.0568s] SENT: 15 packets (300ms of audio) corr=['corr-933b62a2']
+[204.0744s] RECV_AUDIO: 12000 bytes
+[204.0777s - 204.2700s] SENT: 16 packets (320ms of audio) corr=['corr-933b62a2']
+[204.2785s] RECV_AUDIO: 12000 bytes
+[204.3930s - 204.5527s] SENT: 11 packets (220ms of audio) corr=['corr-933b62a2']
+[204.5560s] RECV_AUDIO: 12000 bytes
+[204.6112s - 204.8468s] SENT: 13 packets (260ms of audio) corr=['corr-933b62a2']
+[204.8627s] RECV_AUDIO: 12000 bytes
+[204.9229s - 205.0384s] SENT: 13 packets (260ms of audio) corr=['corr-933b62a2']
+[205.0439s] RECV_AUDIO: 12000 bytes
+[205.1551s - 205.3050s] SENT: 10 packets (200ms of audio) corr=['corr-933b62a2']
+[205.3548s] RECV_AUDIO: 12000 bytes
+[205.3711s - 205.5554s] SENT: 13 packets (260ms of audio) corr=['corr-933b62a2']
+[205.5699s] RECV_AUDIO: 12000 bytes
+[205.5790s - 205.8559s] SENT: 11 packets (220ms of audio) corr=['corr-933b62a2']
+[205.8893s] RECV_AUDIO: 12000 bytes
+[205.8949s - 206.0889s] SENT: 10 packets (200ms of audio) corr=['corr-933b62a2']
+[206.1036s] RECV_AUDIO: 12000 bytes
+[206.1370s - 206.3536s] SENT: 18 packets (360ms of audio) corr=['corr-933b62a2']
+[206.3575s] RECV_AUDIO: 12000 bytes
+[206.3759s - 206.6230s] SENT: 13 packets (260ms of audio) corr=['corr-933b62a2']
+[206.6419s] RECV_AUDIO: 12000 bytes
+[206.6659s - 206.8352s] SENT: 7 packets (140ms of audio) corr=['corr-933b62a2']
+[206.8531s] RECV_AUDIO: 12000 bytes
+[206.9011s - 207.0274s] SENT: 16 packets (320ms of audio) corr=['corr-933b62a2']
+[207.0622s] RECV_AUDIO: 12000 bytes
+[207.0728s - 207.3004s] SENT: 12 packets (240ms of audio) corr=['corr-933b62a2']
+[207.3249s] RECV_AUDIO: 12000 bytes
+[207.3488s - 207.5671s] SENT: 13 packets (260ms of audio) corr=['corr-933b62a2']
+[207.6070s] RECV_AUDIO: 12000 bytes
+[207.6091s - 207.7839s] SENT: 13 packets (260ms of audio) corr=['corr-933b62a2']
+[207.8129s] RECV_AUDIO: 12000 bytes
+[207.8234s - 208.0977s] SENT: 5 packets (100ms of audio) corr=['corr-933b62a2']
+[208.2384s] RECV_AUDIO: 12000 bytes
+[208.2571s - 208.6149s] SENT: 13 packets (260ms of audio) corr=['corr-933b62a2']
+[208.7038s] RECV_AUDIO: 12000 bytes
+[208.7124s] RECV_AUDIO: 12000 bytes
+[208.7212s - 209.0455s] SENT: 24 packets (480ms of audio) corr=['corr-933b62a2']
+[209.1431s] RECV_AUDIO: 12000 bytes
+[209.1594s] RECV_AUDIO: 12000 bytes
+[209.1624s - 209.5913s] SENT: 29 packets (580ms of audio) corr=['corr-933b62a2']
+[209.6423s] RECV_AUDIO: 12000 bytes
+[209.6476s] RECV_AUDIO: 12000 bytes
+[209.6534s - 210.0340s] SENT: 21 packets (420ms of audio) corr=['corr-933b62a2']
+[210.0569s] RECV_AUDIO: 12000 bytes
+[210.0589s - 210.2689s] SENT: 16 packets (320ms of audio) corr=['corr-933b62a2']
+[210.2834s] RECV_AUDIO: 12000 bytes
+[210.3067s - 210.5748s] SENT: 15 packets (300ms of audio) corr=['corr-933b62a2']
+[210.6558s] RECV_AUDIO: 12000 bytes
+[210.6727s] RECV_AUDIO: 12000 bytes
+[210.7089s - 211.0414s] SENT: 17 packets (340ms of audio) corr=['corr-933b62a2']
+[211.0739s] RECV_AUDIO: 12000 bytes
+[211.0788s - 211.3752s] SENT: 20 packets (400ms of audio) corr=['corr-933b62a2']
+[211.3791s] RECV_AUDIO: 12000 bytes
+[211.4670s - 211.5052s] SENT: 5 packets (100ms of audio) corr=['corr-933b62a2']
+[211.5219s] RECV_AUDIO: 12000 bytes
+[211.5252s - 211.8659s] SENT: 20 packets (400ms of audio) corr=['corr-933b62a2']
+[211.9054s] RECV_AUDIO: 12000 bytes
+[211.9105s] RECV_AUDIO: 12000 bytes
+[211.9225s - 212.2452s] SENT: 22 packets (440ms of audio) corr=['corr-933b62a2']
+[212.2575s] RECV_AUDIO: 12000 bytes
+[212.2816s - 212.3614s] SENT: 10 packets (200ms of audio) corr=['corr-38f30802']
+[212.3949s] RECV_AUDIO: 12000 bytes
+[212.4062s - 212.5609s] SENT: 11 packets (220ms of audio) corr=['corr-38f30802']
+[212.6220s] RECV_AUDIO: 12000 bytes
+[212.6250s - 213.2436s] SENT: 20 packets (400ms of audio) corr=['corr-38f30802']
+[213.3058s] RECV_AUDIO: 12000 bytes
+[213.3160s] RECV_AUDIO: 12000 bytes
+[213.3253s - 213.5174s] SENT: 23 packets (460ms of audio) corr=['corr-38f30802']
+[213.5377s] RECV_AUDIO: 12000 bytes
+[213.5408s - 213.7689s] SENT: 17 packets (340ms of audio) corr=['corr-38f30802']
+[213.7827s] RECV_AUDIO: 12000 bytes
+[213.7918s - 213.9610s] SENT: 13 packets (260ms of audio) corr=['corr-38f30802']
+[213.9744s] RECV_AUDIO: 12000 bytes
+[214.0553s - 214.1460s] SENT: 10 packets (200ms of audio) corr=['corr-38f30802']
+[214.1954s] RECV_AUDIO: 12000 bytes
+[214.2100s - 214.4518s] SENT: 10 packets (200ms of audio) corr=['corr-38f30802']
+[214.4728s] RECV_AUDIO: 12000 bytes
+[214.4863s - 214.6768s] SENT: 16 packets (320ms of audio) corr=['corr-38f30802']
+[214.6929s] RECV_AUDIO: 12000 bytes
+[214.7174s - 214.9397s] SENT: 12 packets (240ms of audio) corr=['corr-38f30802']
+[214.9446s] RECV_AUDIO: 12000 bytes
+[215.1408s - 215.2256s] SENT: 12 packets (240ms of audio) corr=['corr-38f30802']
+[215.2449s] RECV_AUDIO: 12000 bytes
+[215.2528s - 215.4227s] SENT: 14 packets (280ms of audio) corr=['corr-38f30802']
+[215.4660s] RECV_AUDIO: 12000 bytes
+[215.4714s - 215.8236s] SENT: 10 packets (200ms of audio) corr=['corr-38f30802']
+[215.8712s] RECV_AUDIO: 12000 bytes
+[215.8746s] RECV_AUDIO: 12000 bytes
+[215.8911s - 216.1933s] SENT: 19 packets (380ms of audio) corr=['corr-38f30802']
+[216.2168s] RECV_AUDIO: 12000 bytes
+[216.2260s - 216.4409s] SENT: 21 packets (420ms of audio) corr=['corr-38f30802']
+[216.4601s] RECV_AUDIO: 12000 bytes
+[216.4692s - 216.6757s] SENT: 10 packets (200ms of audio) corr=['corr-38f30802']
+[216.7241s] RECV_AUDIO: 12000 bytes
+[216.7389s - 216.9568s] SENT: 13 packets (260ms of audio) corr=['corr-38f30802']
+[217.0053s] RECV_AUDIO: 12000 bytes
+[217.0171s - 217.2547s] SENT: 13 packets (260ms of audio) corr=['corr-38f30802']
+[217.2586s] RECV_AUDIO: 12000 bytes
+[217.2952s - 217.3780s] SENT: 11 packets (220ms of audio) corr=['corr-38f30802']
+[217.4111s] RECV_AUDIO: 12000 bytes
+[217.4151s - 217.8627s] SENT: 12 packets (240ms of audio) corr=['corr-38f30802']
+[218.0727s] RECV_AUDIO: 12000 bytes
+[218.0894s] RECV_AUDIO: 12000 bytes
+[218.0943s - 218.3559s] SENT: 14 packets (280ms of audio) corr=['corr-38f30802']
+[218.3956s] RECV_AUDIO: 12000 bytes
+[218.4419s - 218.4932s] SENT: 7 packets (140ms of audio) corr=['corr-38f30802']
+[218.6715s] RECV_AUDIO: 12000 bytes
+[218.6769s - 218.9434s] SENT: 23 packets (460ms of audio) corr=['corr-38f30802']
+[218.9721s] RECV_AUDIO: 12000 bytes
+[219.0051s] RECV_AUDIO: 12000 bytes
+[219.0108s - 219.3768s] SENT: 20 packets (400ms of audio) corr=['corr-38f30802']
+[219.6751s] RECV_AUDIO: 12000 bytes
+[219.6776s] RECV_AUDIO: 12000 bytes
+[219.6863s - 220.0072s] SENT: 17 packets (340ms of audio) corr=['corr-38f30802']
+[220.0527s] RECV_AUDIO: 12000 bytes
+[220.0568s] RECV_AUDIO: 12000 bytes
+[220.0729s - 220.3577s] SENT: 31 packets (620ms of audio) corr=['corr-38f30802']
+[220.3758s] RECV_AUDIO: 12000 bytes
+[220.4253s - 220.9960s] SENT: 21 packets (420ms of audio) corr=['corr-38f30802']
+[221.1713s] RECV_AUDIO: 12000 bytes
+[221.1751s] RECV_AUDIO: 12000 bytes
+[221.1809s] RECV_AUDIO: 12000 bytes
+[221.1953s - 221.4627s] SENT: 18 packets (360ms of audio) corr=['corr-38f30802']
+[221.5477s] RECV_AUDIO: 12000 bytes
+[221.5566s] RECV_AUDIO: 12000 bytes
+[221.5674s - 221.8702s] SENT: 37 packets (740ms of audio) corr=['corr-38f30802']
+[221.8836s] RECV_AUDIO: 12000 bytes
+[222.0909s - 222.1940s] SENT: 20 packets (400ms of audio) corr=['corr-38f30802']
+[222.2031s] RECV_AUDIO: 12000 bytes
+[222.2058s] RECV_AUDIO: 12000 bytes
+[222.3033s - 222.3389s] SENT: 11 packets (220ms of audio) corr=['corr-38f30802']

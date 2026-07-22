@@ -384,6 +384,8 @@ class StreamingSession:
         self._event_seq_counter = 0
         self._listeners: List[Callable[[Any], Any]] = []
         self._cumulative_text = ""
+        self._correlation_to_participant = {}
+        self._correlation_to_capture_start_ns = {}
 
     @property
     def state(self) -> StreamingSessionState:
@@ -535,6 +537,21 @@ class StreamingSession:
         frame_delay_ms = (now_ns - packet.capture_timestamp_ns) / 1_000_000.0
         self._metrics_collector.record_received(frame_delay_ms)
 
+        # Record chunk timing (Suggestion 5)
+        if not hasattr(self, "_last_packet_time"):
+            self._last_packet_time = time.perf_counter()
+        now = time.perf_counter()
+        gap_ms = (now - self._last_packet_time) * 1000.0
+        self._last_packet_time = now
+        logger.info(f"[Audio Ingest Timing] Packet seq={packet.sequence_number} size={len(packet.pcm_data)} bytes gap={gap_ms:.1f} ms")
+
+        # Track correlation ID to participant identity and capture start time
+        corr_id = packet.metadata.correlation_id
+        if corr_id:
+            self._correlation_to_participant[corr_id] = packet.metadata.participant_identity
+            if corr_id not in self._correlation_to_capture_start_ns:
+                self._correlation_to_capture_start_ns[corr_id] = packet.capture_timestamp_ns
+
         # Emit frame received event
         await self._emit(StreamingAudioFrameReceivedEvent(
             session_id=self.session_id,
@@ -682,7 +699,28 @@ class StreamingSession:
                     self._cumulative_text = ""  # Reset cumulative buffer on boundary
                     self._metrics_collector.record_completed()
 
+                # Enrich participant identity and calculate latency if applicable
+                if event is not None and hasattr(event, "correlation_id"):
+                    corr_id = event.correlation_id
+                    participant = self._correlation_to_participant.get(corr_id, "")
+                    if participant and hasattr(event, "participant_identity"):
+                        event = replace(event, participant_identity=participant)
+
+                    capture_start_ns = self._correlation_to_capture_start_ns.get(corr_id)
+                    if capture_start_ns:
+                        latency_ms = (time.perf_counter_ns() - capture_start_ns) / 1_000_000.0
+                        logger.info(
+                            f"[Latency Instrumentation] Event {event.__class__.__name__} "
+                            f"for correlation {corr_id} | End-to-End Latency: {latency_ms:.2f} ms"
+                        )
+
+                # Log event dispatching for debug traceability
+                try:
+                    logger.info(f"[Event Dispatcher] Emitting event {event.__class__.__name__} | corr={getattr(event, 'correlation_id', '')} | seq={getattr(event, 'event_seq', None)} | payload_preview={str(event)[:200]}")
+                except Exception:
+                    logger.info(f"[Event Dispatcher] Emitting event {event.__class__.__name__}")
                 await self._emit(event)
+                logger.info(f"[Event Dispatcher] Emitted event {event.__class__.__name__}")
                 self._event_queue.task_done()
             except asyncio.CancelledError:
                 break

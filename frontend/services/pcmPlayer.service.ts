@@ -6,6 +6,12 @@ export class PCMStreamPlayer {
   public onPlaybackStart: (() => void) | null = null;
   public onPlaybackEnd: (() => void) | null = null;
 
+  // Experiment instrumentation metrics
+  public playChunkCalledCount = 0;
+  public playChunkScheduledCount = 0;
+  public playbackStartEventCount = 0;
+  public playbackEndEventCount = 0;
+
   constructor() {
     // AudioContext will be initialized on first user interaction (session start)
   }
@@ -22,6 +28,7 @@ export class PCMStreamPlayer {
   }
 
   public playChunk(base64Data: string) {
+    this.playChunkCalledCount++;
     try {
       this.initAudioContext();
       if (!this.audioCtx) return;
@@ -61,10 +68,12 @@ export class PCMStreamPlayer {
       // Schedule play
       sourceNode.start(this.nextPlayTime);
       this.nextPlayTime += audioBuffer.duration;
+      this.playChunkScheduledCount++;
 
       // 5. Track state changes
       this.activeNodesCount++;
       if (this.activeNodesCount === 1) {
+        this.playbackStartEventCount++;
         if (this.onPlaybackStart) {
           this.onPlaybackStart();
         }
@@ -74,6 +83,7 @@ export class PCMStreamPlayer {
         this.activeNodesCount--;
         if (this.activeNodesCount <= 0) {
           this.activeNodesCount = 0;
+          this.playbackEndEventCount++;
           if (this.onPlaybackEnd) {
             this.onPlaybackEnd();
           }
@@ -88,6 +98,10 @@ export class PCMStreamPlayer {
   public stop() {
     this.nextPlayTime = 0;
     this.activeNodesCount = 0;
+    this.playChunkCalledCount = 0;
+    this.playChunkScheduledCount = 0;
+    this.playbackStartEventCount = 0;
+    this.playbackEndEventCount = 0;
     if (this.audioCtx) {
       try {
         this.audioCtx.close();

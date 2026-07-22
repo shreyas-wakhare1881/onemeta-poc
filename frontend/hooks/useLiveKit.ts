@@ -32,6 +32,9 @@ export function useLiveKit() {
   const [aiEvents, setAiEvents] = useState<LiveKitAIEventPacket[]>([]);
   const [telemetryData, setTelemetryData] = useState<TelemetryUpdatePayload | null>(null);
 
+  // Experiment: Audio packets received count ref
+  const totalAudioEventsReceivedRef = useRef(0);
+
   // Room instance ref
   const roomRef = useRef<Room | null>(null);
 
@@ -39,8 +42,8 @@ export function useLiveKit() {
   const reconnectingRef = useRef<boolean>(false);
   const reconnectAttemptRef = useRef<number>(0);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const connectionParamsRef = useRef<{ roomName: string; identity: string } | null>(null);
-  const connectRef = useRef<((roomName: string, identity: string, isReconnecting?: boolean) => Promise<void>) | null>(null);
+  const connectionParamsRef = useRef<{ roomName: string; identity: string; loopback: boolean } | null>(null);
+  const connectRef = useRef<((roomName: string, identity: string, loopback?: boolean, isReconnecting?: boolean) => Promise<void>) | null>(null);
 
   // Data packet received handler
   const handleDataReceived = useCallback((payload: Uint8Array, participant: unknown) => {
@@ -93,6 +96,10 @@ export function useLiveKit() {
       if (type === 'TelemetryUpdate') {
         setTelemetryData(packetPayload as TelemetryUpdatePayload);
       } else {
+        if (type === 'StreamingTranslationAudioEvent') {
+          totalAudioEventsReceivedRef.current++;
+          console.log(`[NET RECEIVE] Total Audio Chunks Received: ${totalAudioEventsReceivedRef.current}`);
+        }
         setAiEvents((prev) => [...prev, parsed as LiveKitAIEventPacket]);
       }
     } catch (e) {
@@ -113,7 +120,7 @@ export function useLiveKit() {
       // If we did not disconnect manually, trigger auto-reconnect
       if (connectionParamsRef.current && !reconnectingRef.current) {
         reconnectingRef.current = true;
-        const { roomName, identity } = connectionParamsRef.current;
+        const { roomName, identity, loopback } = connectionParamsRef.current;
         const attempt = reconnectAttemptRef.current + 1;
         if (attempt > 5) {
           setError('Failed to reconnect. Max connection attempts reached.');
@@ -131,7 +138,7 @@ export function useLiveKit() {
           try {
             await cleanupRoomInstance(true);
             if (connectRef.current) {
-              await connectRef.current(roomName, identity, true);
+              await connectRef.current(roomName, identity, loopback, true);
             }
             reconnectingRef.current = false;
           } catch (err) {
@@ -252,6 +259,7 @@ export function useLiveKit() {
       setAiEvents([]);
       setTelemetryData(null);
       setStatus('Disconnected');
+      totalAudioEventsReceivedRef.current = 0;
     } else {
       setStatus('Connecting');
     }
@@ -263,7 +271,7 @@ export function useLiveKit() {
     handleDataReceived
   ]);
 
-  const connect = useCallback(async (roomName: string, identity: string, isReconnecting = false) => {
+  const connect = useCallback(async (roomName: string, identity: string, loopback = false, isReconnecting = false) => {
     if (!roomName.trim() || !identity.trim()) {
       setError('Room Name and Participant Identity are required.');
       setStatus('Failed');
@@ -271,7 +279,7 @@ export function useLiveKit() {
     }
 
     if (!isReconnecting) {
-      connectionParamsRef.current = { roomName, identity };
+      connectionParamsRef.current = { roomName, identity, loopback };
       reconnectAttemptRef.current = 0;
       setError(null);
     }
@@ -325,7 +333,11 @@ export function useLiveKit() {
         await fetch('http://127.0.0.1:8000/api/audio/agent/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ room_name: roomName }),
+          body: JSON.stringify({ 
+            room_name: roomName,
+            loopback,
+            source_participant_identity: identity
+          }),
         });
       } catch (err) {
         console.error('Failed to trigger backend agent startup:', err);
@@ -427,5 +439,6 @@ export function useLiveKit() {
     disconnect,
     toggleCamera,
     toggleMicrophone,
+    totalAudioEventsReceivedRef,
   };
 }

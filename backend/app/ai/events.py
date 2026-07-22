@@ -49,6 +49,7 @@ class StreamingPartialTranslationEvent:
     text_delta: str
     cumulative_text: str
     correlation_id: str
+    participant_identity: str = ""
 
 @dataclass(frozen=True)
 class StreamingTranslationCompletedEvent:
@@ -59,6 +60,7 @@ class StreamingTranslationCompletedEvent:
     full_text: str
     correlation_id: str
     metrics: dict = field(default_factory=dict)
+    participant_identity: str = ""
 
 @dataclass(frozen=True)
 class StreamingSessionClosedEvent:
@@ -110,4 +112,5 @@ class StreamingTranslationAudioEvent:
     audio_data: bytes
     mime_type: str
     correlation_id: str = ""
+    participant_identity: str = ""
 

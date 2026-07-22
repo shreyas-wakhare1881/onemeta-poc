@@ -9,6 +9,8 @@ router = APIRouter(prefix="/api/audio", tags=["audio"])
 
 class AgentStartRequest(BaseModel):
     room_name: str = Field(..., min_length=1, max_length=128, example="test-room")
+    loopback: bool = Field(False)
+    source_participant_identity: str = Field("User-A")
 
 class AgentStopRequest(BaseModel):
     room_name: str = Field(..., min_length=1, max_length=128, example="test-room")
@@ -20,7 +22,11 @@ async def start_agent(request: AgentStartRequest):
     Will be replaced by an event-driven lifecycle in a future milestone.
     """
     try:
-        await start_audio_agent(request.room_name)
+        await start_audio_agent(
+            request.room_name,
+            loopback=request.loopback,
+            source_participant_identity=request.source_participant_identity
+        )
         return {
             "status": "success", 
             "message": f"Dispatched background agent for room: {request.room_name} (Temporary Endpoint)"

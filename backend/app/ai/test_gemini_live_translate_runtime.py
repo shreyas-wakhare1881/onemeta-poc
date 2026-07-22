@@ -161,3 +161,78 @@ class TestGeminiLiveTranslateRuntime(unittest.IsolatedAsyncioTestCase):
             
         await runtime.shutdown()
         self.assertFalse(await runtime.is_ready())
+
+    async def test_event_buffering_and_deduplication(self):
+        config = AIConfig(
+            google_api_key="fake-api-key",
+            gemini_live_translate_model="models/gemini-3.5-live-translate-preview",
+            target_language="es"
+        )
+        runtime = GeminiLiveTranslateRuntime(config)
+        
+        mock_client = MagicMock()
+        mock_sdk_session = MockSDKSession()
+        mock_ctx = MagicMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_sdk_session)
+        mock_ctx.__aexit__ = AsyncMock()
+        mock_client.aio.live.connect = MagicMock(return_value=mock_ctx)
+        
+        with patch("google.genai.Client", return_value=mock_client):
+            await runtime.initialize()
+            transport = await runtime.connect(
+                session_id="test-session-buf",
+                source_language="English",
+                target_language="Spanish"
+            )
+            
+            # Send packet to set active correlation ID
+            packet = StreamingAudioPacket(
+                pcm_data=memoryview(b"\x00" * 320),
+                sample_rate=16000,
+                channels=1,
+                capture_timestamp_ns=1000,
+                sequence_number=1,
+                is_speech=True,
+                metadata=StreamingPacketMetadata("f-1", "user", "sid", 90.0, "corr-test-buf")
+            )
+            await transport.send_packet(packet)
+            
+            # 1. Verify multiple events in a single message are preserved and not dropped
+            mixed_msg = MockLiveServerMessage(
+                server_content=MockServerContent(
+                    output_transcription=MockAudioTranscription(text="Hola"),
+                    model_turn=MockModelTurn(parts=[
+                        MockPart(inline_data=MockInlineData(data=b"\xaa\xbb"))
+                    ])
+                )
+            )
+            await mock_sdk_session.receive_queue.put(mixed_msg)
+            
+            ev1 = await transport.receive_event()
+            ev2 = await transport.receive_event()
+            
+            # Ensure both the transcription event and audio event are returned sequentially
+            self.assertIsInstance(ev1, StreamingPartialTranslationEvent)
+            self.assertEqual(ev1.text_delta, "Hola")
+            self.assertIsInstance(ev2, StreamingTranslationAudioEvent)
+            self.assertEqual(ev2.audio_data, b"\xaa\xbb")
+            
+            # 2. Verify that output transcription text is forwarded directly as delta
+            delta_msg = MockLiveServerMessage(
+                server_content=MockServerContent(
+                    output_transcription=MockAudioTranscription(text=", amigo")
+                )
+            )
+            await mock_sdk_session.receive_queue.put(delta_msg)
+            ev3 = await transport.receive_event()
+            self.assertIsInstance(ev3, StreamingPartialTranslationEvent)
+            self.assertEqual(ev3.text_delta, ", amigo")
+            
+            # 3. Verify end_user_turn sends audio_stream_end
+            await transport.end_user_turn()
+            self.assertEqual(len(mock_sdk_session.sent_realtime_inputs), 2) # 1 packet + 1 end_user_turn
+            args, kwargs = mock_sdk_session.sent_realtime_inputs[1]
+            self.assertTrue(kwargs.get("audio_stream_end"))
+            
+            await transport.close()
+        await runtime.shutdown()

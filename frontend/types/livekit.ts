@@ -155,6 +155,7 @@ export interface StreamingTranslationAudioPacket extends BasePacket {
     audio_data: string;
     mime_type: string;
     correlation_id: string;
+    participant_identity?: string;
   };
 }
 

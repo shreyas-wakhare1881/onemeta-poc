@@ -11,7 +11,7 @@ export default function TranscriptCard({ englishTranscript, englishScrollRef }: 
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-2">
           <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-          <span>User A (Speaker - English)</span>
+          <span>English (Live Transcript)</span>
         </h3>
         <span className="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded font-semibold font-mono uppercase border border-indigo-500/20">
           Local Preview
