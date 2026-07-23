@@ -18,6 +18,10 @@ logger = logging.getLogger("onemeta.audio_agent")
 
 # Holds active agent connection tasks to prevent duplicate agent processes per room
 _active_agents = {}
+_active_session_folders = {}
+
+def get_active_session_folder(room_name: str) -> str:
+    return _active_session_folders.get(room_name, "")
 
 # Experiment: Global counters for audio packets sent to LiveKit data channel and incoming audio frames
 _audio_packets_sent_count = 0
@@ -81,10 +85,21 @@ async def stop_all_agents():
 async def _run_agent(room_name: str, loopback: bool = False, source_participant_identity: str = "User-A"):
     logger.info(f"Connecting audio agent to room: {room_name} (loopback={loopback}, source={source_participant_identity})")
 
+    import datetime
+    from pathlib import Path
+    
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    session_folder = f"{timestamp}_{room_name}"
+    _active_session_folders[room_name] = session_folder
+
+    # Create session folder immediately
+    session_dir = Path(__file__).resolve().parents[3] / "output" / session_folder
+    session_dir.mkdir(parents=True, exist_ok=True)
+
     # 1. Initialize config, audio telemetry and pipeline event tracer
     audio_config = AudioConfig()
     telemetry = AudioTelemetry()
-    tracer = PipelineEventTracer(room_name)
+    tracer = PipelineEventTracer(room_name, session_folder=session_folder)
     tracer.log_event(PipelineEvent.SESSION_STARTED)
 
     # Log Audio Configuration details (Suggestion 4)
@@ -353,7 +368,7 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
         runtime=live_runtime,
         source_lang=ai_config.default_source_lang,
         target_lang=ai_config.target_language,
-        metadata={"tracer": tracer}
+        metadata={"tracer": tracer, "session_folder": session_folder}
     )
     session.register_listener(log_ai_event)
 

@@ -12,8 +12,9 @@ from .tracing_events import PipelineEvent
 logger = logging.getLogger("onemeta.pipeline_tracer")
 
 class PipelineEventTracer:
-    def __init__(self, session_id: str):
+    def __init__(self, session_id: str, session_folder: str = None):
         self.session_id = session_id
+        self.session_folder = session_folder
         self.enabled = os.getenv("ENABLE_PIPELINE_TRACE", "false").lower() == "true"
         self.trace_level = os.getenv("PIPELINE_TRACE_LEVEL", "basic").lower()
         self.events: List[Dict[str, Any]] = []
@@ -23,7 +24,10 @@ class PipelineEventTracer:
         
         if self.enabled:
             # Create output directory for traces (parents[3] is onemeta-poc base directory)
-            self.output_dir = Path(__file__).resolve().parents[3] / "output" / "traces" / "backend"
+            if self.session_folder:
+                self.output_dir = Path(__file__).resolve().parents[3] / "output" / self.session_folder
+            else:
+                self.output_dir = Path(__file__).resolve().parents[3] / "output" / "traces" / "backend"
             try:
                 self.output_dir.mkdir(parents=True, exist_ok=True)
                 logger.info(f"Initialized PipelineEventTracer for session: {self.session_id} (Output: {self.output_dir})")
@@ -176,14 +180,33 @@ class PipelineEventTracer:
         # Validate trace before saving (errors are logged but saving is still attempted)
         self._validate_trace(trace_data)
         
-        # Filename format: session_<sessionId>_<yyyyMMdd_HHmmss>.json
-        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"session_{self.session_id}_{timestamp_str}.json"
-        filepath = self.output_dir / filename
-        
-        try:
-            with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(trace_data, f, indent=2)
-            logger.info(f"Successfully saved backend trace file to: {filepath}")
-        except Exception as e:
-            logger.error(f"Failed to save backend trace file: {e}")
+        if self.session_folder:
+            # 1. Save standard trace JSON as session_trace.json
+            json_filepath = self.output_dir / "session_trace.json"
+            try:
+                with open(json_filepath, "w", encoding="utf-8") as f:
+                    json.dump(trace_data, f, indent=2)
+                logger.info(f"Successfully saved session trace JSON to: {json_filepath}")
+            except Exception as e:
+                logger.error(f"Failed to save session trace JSON: {e}")
+                
+            # 2. Save readable backend event log as backend.log
+            backend_log_path = self.output_dir / "backend.log"
+            try:
+                with open(backend_log_path, "w", encoding="utf-8") as f:
+                    for ev in self.events:
+                        f.write(f"[{ev['component'].upper()}] {ev['event']} | seq={ev['seq']} | timestamp={ev['timestamp_epoch_ms']} | metadata={json.dumps(ev['metadata'])}\n")
+                logger.info(f"Successfully saved backend.log event trace to: {backend_log_path}")
+            except Exception as e:
+                logger.error(f"Failed to save backend.log event trace: {e}")
+        else:
+            # Legacy fallback for backwards compatibility when no active session folder is configured
+            timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"session_{self.session_id}_{timestamp_str}.json"
+            filepath = self.output_dir / filename
+            try:
+                with open(filepath, "w", encoding="utf-8") as f:
+                    json.dump(trace_data, f, indent=2)
+                logger.info(f"Successfully saved backend trace file to: {filepath}")
+            except Exception as e:
+                logger.error(f"Failed to save backend trace file: {e}")

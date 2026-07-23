@@ -1,1 +1,0 @@
-Hola a todos. Mi nombre es Rishabh. Hoy estamos probando el procesamiento de voz del backend. Esta grabación se utiliza para validar la

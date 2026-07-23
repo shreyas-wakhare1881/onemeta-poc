@@ -48,7 +48,8 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
         model_name: str,
         modalities: List[str],
         voice_name: str,
-        tracer: Any = None
+        tracer: Any = None,
+        session_folder: str = None
     ):
         self.session_id = session_id
         self.sdk_session = sdk_session
@@ -59,16 +60,25 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
         self.modalities = modalities
         self.voice_name = voice_name
         self.closed = False
+        self.session_folder = session_folder
         import collections
         self._pending_events = collections.deque()
         self._last_transcript = ""
         
         # Initialize WAV writers for audio verification (WAV Capture)
         from pathlib import Path
-        output_dir = Path(__file__).resolve().parents[4] / "output"
         from ...audio.wav_writer import WavWriter
-        self._input_wav = WavWriter(output_dir / f"{session_id}_input.wav", sample_rate=16000, channels=1)
-        self._output_wav = WavWriter(output_dir / f"{session_id}_output.wav", sample_rate=24000, channels=1)
+        
+        if not self.session_folder:
+            import datetime
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            self.session_folder = f"{timestamp}_{session_id}"
+            
+        session_dir = Path(__file__).resolve().parents[4] / "output" / self.session_folder
+        session_dir.mkdir(parents=True, exist_ok=True)
+        self._input_wav = WavWriter(session_dir / "input.wav", sample_rate=16000, channels=1)
+        self._output_wav = WavWriter(session_dir / "output.wav", sample_rate=24000, channels=1)
+        self.debug_log_path = session_dir / "gemini.log"
         
         self._current_correlation_id = ""
         self._receive_iterator = self.sdk_session.receive()
@@ -115,7 +125,7 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
         if DEBUG_GEMINI:
             try:
                 prefix_b64 = base64.b64encode(pcm_bytes[:64]).decode("ascii")
-                with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as _f:
+                with open(self.debug_log_path, "a", encoding="utf-8") as _f:
                     _f.write(json.dumps({
                         "time": time.time(),
                         "session": self.session_id,
@@ -192,7 +202,7 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
                     # Optional debug: log full response repr and a small server_content summary
                     if DEBUG_GEMINI:
                         try:
-                            with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as _f:
+                            with open(self.debug_log_path, "a", encoding="utf-8") as _f:
                                 _f.write(json.dumps({"time": time.time(), "session": self.session_id, "action": "recv_response", "repr": repr(response)}) + "\n")
                                 sc = getattr(response, "server_content", None)
                                 if sc is not None:
@@ -530,7 +540,13 @@ class GeminiLiveTranslateRuntime(BaseStreamingRuntime):
         )
         if DEBUG_GEMINI:
             try:
-                with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as _f:
+                session_folder = metadata.get("session_folder") if metadata else None
+                if session_folder:
+                    session_debug_log_path = Path(__file__).resolve().parents[4] / "output" / session_folder / "gemini.log"
+                else:
+                    session_debug_log_path = DEBUG_LOG_PATH
+                session_debug_log_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(session_debug_log_path, "a", encoding="utf-8") as _f:
                     _f.write(json.dumps({
                         "time": time.time(),
                         "session": session_id,
@@ -550,6 +566,7 @@ class GeminiLiveTranslateRuntime(BaseStreamingRuntime):
         sdk_session = await ctx.__aenter__()
         
         tracer = metadata.get("tracer") if metadata else None
+        session_folder = metadata.get("session_folder") if metadata else None
         transport = GeminiLiveTranslateTransport(
             session_id=session_id,
             sdk_session=sdk_session,
@@ -559,7 +576,8 @@ class GeminiLiveTranslateRuntime(BaseStreamingRuntime):
             model_name=self.config.gemini_live_translate_model,
             modalities=modalities_list,
             voice_name=self.config.gemini_live_voice_name,
-            tracer=tracer
+            tracer=tracer,
+            session_folder=session_folder
         )
         return transport
 

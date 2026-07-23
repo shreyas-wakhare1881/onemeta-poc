@@ -53,6 +53,15 @@ REPO_ROOT  = Path(__file__).resolve().parents[2]
 WAV_PATH   = REPO_ROOT / "samples" / "english_sample.wav"
 OUTPUT_DIR = REPO_ROOT / "output" / "e2e"
 
+def _get_output_dir() -> Path:
+    base_output = REPO_ROOT / "output"
+    if base_output.exists():
+        matching_dirs = [d for d in base_output.iterdir() if d.is_dir() and d.name.endswith(f"_{ROOM_NAME}")]
+        if matching_dirs:
+            matching_dirs.sort(key=lambda d: d.stat().st_mtime, reverse=True)
+            return matching_dirs[0]
+    return OUTPUT_DIR
+
 # How long (seconds) to wait for the first streaming translation token on the receiver
 TRANSLATION_TIMEOUT_S = 90
 
@@ -98,8 +107,10 @@ def _check_frontend_reachable() -> bool:
 
 async def _wait_and_screenshot(page, name: str) -> None:
     try:
-        await page.screenshot(path=str(OUTPUT_DIR / name))
-        _log(f"Screenshot saved: {name}")
+        out_dir = _get_output_dir()
+        out_dir.mkdir(parents=True, exist_ok=True)
+        await page.screenshot(path=str(out_dir / name))
+        _log(f"Screenshot saved: {name} in {out_dir}")
     except Exception as e:
         _log(f"Screenshot failed ({name}): {e}")
 
@@ -418,13 +429,37 @@ async def run_e2e() -> int:
         _log(f"Audio event observed on B: {got_audio_event}")
 
         # -----------------------------------------------------------------------
+        # Stage 7.5: Disconnect participants cleanly to trigger trace uploads
+        # -----------------------------------------------------------------------
+        _log("=== Stage 7.5: Disconnecting participants cleanly ===")
+        try:
+            await page_b.click("text=Leave Session")
+            await page_a.click("text=Leave Session")
+            await asyncio.sleep(2)  # wait for backend upload_artifacts call to finish
+            _log("Clean disconnection triggered.")
+            
+            # Stop the backend agent to trigger finally block and save backend.log
+            r_stop = requests.post(
+                BACKEND_URL + "/api/audio/agent/stop",
+                json={"room_name": ROOM_NAME},
+                timeout=10
+            )
+            _log(f"Agent stop response: {r_stop.status_code} {r_stop.text.strip()[:200]}")
+            await asyncio.sleep(1)
+        except Exception as de:
+            _log(f"Clean disconnection click failed: {de}")
+
+        # -----------------------------------------------------------------------
         # Stage 8: Save Playwright traces
         # -----------------------------------------------------------------------
         _log("=== Stage 8: Saving traces ===")
         try:
-            await ctx_a.tracing.stop(path=str(OUTPUT_DIR / "trace_a.zip"))
-            await ctx_b.tracing.stop(path=str(OUTPUT_DIR / "trace_b.zip"))
-            _log("Traces saved.")
+            out_dir = _get_output_dir()
+            e2e_dir = out_dir / "e2e"
+            e2e_dir.mkdir(parents=True, exist_ok=True)
+            await ctx_a.tracing.stop(path=str(e2e_dir / "trace_a.zip"))
+            await ctx_b.tracing.stop(path=str(e2e_dir / "trace_b.zip"))
+            _log("Traces saved to e2e/ subdirectory.")
         except Exception as e:
             _log(f"Trace save failed: {e}")
 
@@ -464,11 +499,22 @@ async def run_e2e() -> int:
 
 
 def _save_evidence(evidence: Dict[str, Any]) -> None:
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    evidence_path = OUTPUT_DIR / "e2e_evidence.json"
+    out_dir = _get_output_dir()
+    os.makedirs(out_dir, exist_ok=True)
+    evidence_path = out_dir / "e2e_evidence.json"
     with open(evidence_path, "w", encoding="utf-8") as f:
         json.dump(evidence, f, indent=2, default=str)
     _log(f"Evidence written to: {evidence_path}")
+    
+    # Copy receiver screenshot to standard ui.png artifact if present
+    import shutil
+    receiver_png = out_dir / "e2e_receiver.png"
+    if receiver_png.exists():
+        try:
+            shutil.copy(receiver_png, out_dir / "ui.png")
+            _log("Copied e2e_receiver.png to ui.png artifact.")
+        except Exception as e:
+            _log(f"Failed to copy screenshot to ui.png: {e}")
 
 
 if __name__ == "__main__":

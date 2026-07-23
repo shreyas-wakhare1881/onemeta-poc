@@ -30,6 +30,14 @@ dist/
 build/
 
 # ==========================
+# Runtime Output / Test Artifacts
+# ==========================
+output/
+
+# If you want to keep the folder structure in Git:
+#!output/.gitkeep
+
+# ==========================
 # Environment Variables
 # ==========================
 .env
