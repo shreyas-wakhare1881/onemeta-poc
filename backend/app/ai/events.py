@@ -114,3 +114,26 @@ class StreamingTranslationAudioEvent:
     correlation_id: str = ""
     participant_identity: str = ""
 
+
+@dataclass(frozen=True)
+class StreamingInputTranscriptionEvent:
+    session_id: str
+    event_seq: int
+    wall_timestamp: float
+    session_time_ms: float
+    text_delta: str
+    cumulative_text: str
+    correlation_id: str
+    participant_identity: str = ""
+
+
+@dataclass(frozen=True)
+class StreamingInputTranscriptionCompletedEvent:
+    session_id: str
+    event_seq: int
+    wall_timestamp: float
+    session_time_ms: float
+    full_text: str
+    correlation_id: str
+    participant_identity: str = ""
+

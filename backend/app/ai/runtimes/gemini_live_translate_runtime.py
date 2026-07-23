@@ -15,7 +15,9 @@ from ..events import (
     StreamingPartialTranslationEvent,
     StreamingTranslationCompletedEvent,
     StreamingRuntimeErrorEvent,
-    StreamingTranslationAudioEvent
+    StreamingTranslationAudioEvent,
+    StreamingInputTranscriptionEvent,
+    StreamingInputTranscriptionCompletedEvent
 )
 from ...transport.packet import StreamingAudioPacket
 
@@ -45,7 +47,8 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
         target_language: str,
         model_name: str,
         modalities: List[str],
-        voice_name: str
+        voice_name: str,
+        tracer: Any = None
     ):
         self.session_id = session_id
         self.sdk_session = sdk_session
@@ -71,13 +74,22 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
         self._receive_iterator = self.sdk_session.receive()
         self._input_packets_sent_count = 0
         self._received_audio_count = 0
+        self._ws_frame_recv_count = 0
+        self._text_chunk_count = 0
+        self._cumulative_text_len = 0
+        self.tracer = tracer
 
     async def send_packet(self, packet: StreamingAudioPacket) -> None:
         if self.closed:
             return
 
+        corr_id = ""
+        frame_id = ""
         if packet.metadata:
-            self._current_correlation_id = packet.metadata.correlation_id
+            corr_id = packet.metadata.correlation_id
+            frame_id = packet.metadata.frame_id
+            if corr_id:
+                self._current_correlation_id = corr_id
 
         self._input_packets_sent_count += 1
         # Convert memoryview to bytes
@@ -85,7 +97,19 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
         self._input_wav.write(pcm_bytes)
         
         # Log timestamp of forwarded mic frame to Gemini
-        logger.info(f"EXPERIMENT TIMING: Forwarded Mic Packet #{self._input_packets_sent_count} (corr={self._current_correlation_id}) to Gemini at {time.time():.4f}")
+        logger.info(f"EXPERIMENT TIMING: Forwarded Mic Packet #{self._input_packets_sent_count} (corr={corr_id}) to Gemini at {time.time():.4f}")
+        
+        if self.tracer:
+            from ...audio.tracing_events import PipelineEvent
+            self.tracer.log_event(
+                PipelineEvent.AUDIO_SENT_TO_GEMINI,
+                correlation_id=corr_id,
+                metadata={
+                    "frame_id": frame_id,
+                    "packet_size": len(pcm_bytes),
+                    "sample_rate": packet.sample_rate
+                }
+            )
         
         # Optional debug: log outgoing packet metadata and a small prefix of audio
         if DEBUG_GEMINI:
@@ -124,6 +148,47 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
             try:
                 response = await self._receive_iterator.__anext__()
                 if response:
+                    # Parse WebSocket frame details for metadata
+                    response_type = "unknown"
+                    contains_text = False
+                    contains_audio = False
+                    finish_reason = None
+                    
+                    server_content = getattr(response, "server_content", None)
+                    if server_content is not None:
+                        response_type = "server_content"
+                        if getattr(server_content, "output_transcription", None) and getattr(server_content.output_transcription, "text", None):
+                            contains_text = True
+                        if getattr(server_content, "input_transcription", None) and getattr(server_content.input_transcription, "text", None):
+                            contains_text = True
+                        model_turn = getattr(server_content, "model_turn", None)
+                        if model_turn is not None:
+                            for part in getattr(model_turn, "parts", []):
+                                if getattr(part, "inline_data", None):
+                                    contains_audio = True
+                                if getattr(part, "text", None):
+                                    contains_text = True
+                        if getattr(server_content, "turn_complete", False):
+                            finish_reason = "turn_complete"
+                    elif getattr(response, "tool_call", None) is not None:
+                        response_type = "tool_call"
+
+                    self._ws_frame_recv_count += 1
+                    
+                    if self.tracer:
+                        from ...audio.tracing_events import PipelineEvent
+                        self.tracer.log_event(
+                            PipelineEvent.GEMINI_WS_FRAME_RECEIVED,
+                            correlation_id=self._current_correlation_id,
+                            metadata={
+                                "response_type": response_type,
+                                "contains_text": contains_text,
+                                "contains_audio": contains_audio,
+                                "finish_reason": finish_reason,
+                                "chunk_index": self._ws_frame_recv_count
+                            }
+                        )
+
                     # Optional debug: log full response repr and a small server_content summary
                     if DEBUG_GEMINI:
                         try:
@@ -133,6 +198,8 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
                                 if sc is not None:
                                     try:
                                         summary = {}
+                                        if getattr(sc, "input_transcription", None):
+                                            summary["input_transcription"] = getattr(sc.input_transcription, "text", None)
                                         if getattr(sc, "output_transcription", None):
                                             summary["output_transcription"] = getattr(sc.output_transcription, "text", None)
                                         if getattr(sc, "model_turn", None) and getattr(sc.model_turn, "parts", None):
@@ -157,10 +224,41 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
 
                     events_extracted = []
 
+                    # Handle input transcription text (English source audio ASR deltas)
+                    if getattr(content, "input_transcription", None) and getattr(content.input_transcription, "text", None):
+                        input_delta = content.input_transcription.text
+                        if input_delta:
+                            events_extracted.append(
+                                StreamingInputTranscriptionEvent(
+                                    session_id=self.session_id,
+                                    event_seq=0,
+                                    wall_timestamp=time.time(),
+                                    session_time_ms=0.0,
+                                    text_delta=input_delta,
+                                    cumulative_text="",
+                                    correlation_id=self._current_correlation_id
+                                )
+                            )
+                            logger.info(f"GeminiLiveTranslateTransport: Extracted input_transcription delta: {input_delta!r} (corr={self._current_correlation_id})")
+
                     # A. Handle output transcription text (Spanish translation deltas)
                     if getattr(content, "output_transcription", None) and getattr(content.output_transcription, "text", None):
                         delta = content.output_transcription.text
                         if delta:
+                            self._text_chunk_count += 1
+                            self._cumulative_text_len += len(delta)
+                            if self.tracer:
+                                from ...audio.tracing_events import PipelineEvent
+                                self.tracer.log_event(
+                                    PipelineEvent.TRANSLATED_TEXT_RECEIVED,
+                                    correlation_id=self._current_correlation_id,
+                                    metadata={
+                                        "text_length": len(delta),
+                                        "cumulative_text_length": self._cumulative_text_len,
+                                        "chunk_index": self._text_chunk_count,
+                                        "text_delta": delta
+                                    }
+                                )
                             events_extracted.append(
                                 StreamingPartialTranslationEvent(
                                     session_id=self.session_id,
@@ -189,6 +287,19 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
                             self._received_audio_count += 1
                             self._output_wav.write(audio_data)
                             logger.info(f"EXPERIMENT TIMING: Received Gemini Audio Chunk #{self._received_audio_count} at {time.time():.4f}")
+                            if self.tracer:
+                                from ...audio.tracing_events import PipelineEvent
+                                duration_sec = len(audio_data) / 48000.0
+                                self.tracer.log_event(
+                                    PipelineEvent.TRANSLATED_AUDIO_RECEIVED,
+                                    correlation_id=self._current_correlation_id,
+                                    metadata={
+                                        "pcm_bytes": len(audio_data),
+                                        "sample_rate": 24000,
+                                        "duration": duration_sec,
+                                        "chunk_index": self._received_audio_count
+                                    }
+                                )
                             events_extracted.append(
                                 StreamingTranslationAudioEvent(
                                     session_id=self.session_id,
@@ -203,6 +314,21 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
                             
                         # Fallback for text turn parts
                         if text_delta:
+                            self._text_chunk_count += 1
+                            self._cumulative_text_len += len(text_delta)
+                            if self.tracer:
+                                from ...audio.tracing_events import PipelineEvent
+                                self.tracer.log_event(
+                                    PipelineEvent.TRANSLATED_TEXT_RECEIVED,
+                                    correlation_id=self._current_correlation_id,
+                                    metadata={
+                                        "text_length": len(text_delta),
+                                        "cumulative_text_length": self._cumulative_text_len,
+                                        "chunk_index": self._text_chunk_count,
+                                        "text_delta": text_delta,
+                                        "is_fallback": True
+                                    }
+                                )
                             events_extracted.append(
                                 StreamingPartialTranslationEvent(
                                     session_id=self.session_id,
@@ -229,6 +355,18 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
                                 correlation_id=self._current_correlation_id
                             )
                         )
+                        events_extracted.append(
+                            StreamingInputTranscriptionCompletedEvent(
+                                session_id=self.session_id,
+                                event_seq=0,
+                                wall_timestamp=time.time(),
+                                session_time_ms=0.0,
+                                full_text="",
+                                correlation_id=self._current_correlation_id
+                            )
+                        )
+                        # Clear active correlation ID since turn is completed
+                        self._current_correlation_id = ""
 
                     # D. Interruption boundary
                     if content.interrupted:
@@ -377,11 +515,10 @@ class GeminiLiveTranslateRuntime(BaseStreamingRuntime):
         logger.info("=========================================")
 
         # Build SDK configuration object for live translation model
-        # Explicitly set input_audio_transcription to None defensively to prevent SDK defaults
         sdk_config = types.LiveConnectConfig(
             response_modalities=modalities_list,
             translation_config=translation_config,
-            input_audio_transcription=None,
+            input_audio_transcription=types.AudioTranscriptionConfig(),
             output_audio_transcription=types.AudioTranscriptionConfig(),
             speech_config=types.SpeechConfig(
                 voice_config=types.VoiceConfig(
@@ -412,6 +549,7 @@ class GeminiLiveTranslateRuntime(BaseStreamingRuntime):
         )
         sdk_session = await ctx.__aenter__()
         
+        tracer = metadata.get("tracer") if metadata else None
         transport = GeminiLiveTranslateTransport(
             session_id=session_id,
             sdk_session=sdk_session,
@@ -420,7 +558,8 @@ class GeminiLiveTranslateRuntime(BaseStreamingRuntime):
             target_language=target_language,
             model_name=self.config.gemini_live_translate_model,
             modalities=modalities_list,
-            voice_name=self.config.gemini_live_voice_name
+            voice_name=self.config.gemini_live_voice_name,
+            tracer=tracer
         )
         return transport
 

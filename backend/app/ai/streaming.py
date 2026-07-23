@@ -19,6 +19,8 @@ from .events import (
     StreamingBackpressureEvent,
     StreamingStateChangedEvent,
     StreamingRuntimeErrorEvent,
+    StreamingInputTranscriptionEvent,
+    StreamingInputTranscriptionCompletedEvent,
 )
 
 logger = logging.getLogger("onemeta.ai.streaming")
@@ -384,6 +386,7 @@ class StreamingSession:
         self._event_seq_counter = 0
         self._listeners: List[Callable[[Any], Any]] = []
         self._cumulative_text = ""
+        self._cumulative_input_text = ""
         self._correlation_to_participant = {}
         self._correlation_to_capture_start_ns = {}
 
@@ -698,6 +701,16 @@ class StreamingSession:
                         event = replace(event, full_text=full_txt)
                     self._cumulative_text = ""  # Reset cumulative buffer on boundary
                     self._metrics_collector.record_completed()
+                elif isinstance(event, StreamingInputTranscriptionEvent):
+                    self._cumulative_input_text += event.text_delta
+                    event = replace(event, cumulative_text=self._cumulative_input_text)
+                elif isinstance(event, StreamingInputTranscriptionCompletedEvent):
+                    if not event.full_text or event.full_text == "[Interrupted]":
+                        full_txt = self._cumulative_input_text
+                        if event.full_text == "[Interrupted]":
+                            full_txt += " [Interrupted]"
+                        event = replace(event, full_text=full_txt)
+                    self._cumulative_input_text = ""  # Reset cumulative input buffer on boundary
 
                 # Enrich participant identity and calculate latency if applicable
                 if event is not None and hasattr(event, "correlation_id"):

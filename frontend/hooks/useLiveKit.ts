@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createRoom, connectRoom, disconnectRoom, stopLocalTracks } from '../services/livekit.service';
 import { getLiveKitToken } from '../services/api';
+import { tracer } from '../services/trace.service';
+import { PipelineEvent } from '../types/trace';
 import { 
   RoomEvent, 
   Room, 
@@ -85,7 +87,8 @@ export function useLiveKit() {
         'AIStartedEvent', 'AIPartialEvent', 'AICompletedEvent', 
         'TranslationFailedEvent', 'AIErrorEvent', 'TelemetryUpdate',
         'StreamingPartialTranslationEvent', 'StreamingTranslationAudioEvent',
-        'StreamingTranslationCompletedEvent', 'StreamingRuntimeErrorEvent'
+        'StreamingTranslationCompletedEvent', 'StreamingRuntimeErrorEvent',
+        'StreamingInputTranscriptionEvent', 'StreamingInputTranscriptionCompletedEvent'
       ];
       if (!knownTypes.includes(type)) {
         console.warn(`Packet Validation Failure: Unknown packet type "${type}". Discarding.`);
@@ -96,9 +99,13 @@ export function useLiveKit() {
       if (type === 'TelemetryUpdate') {
         setTelemetryData(packetPayload as TelemetryUpdatePayload);
       } else {
-        if (type === 'StreamingTranslationAudioEvent') {
+        const corrId = (packetPayload as any)?.correlation_id || '';
+        if (type === 'StreamingPartialTranslationEvent') {
+          tracer.logEvent(PipelineEvent.TEXT_PACKET_RECEIVED, corrId, { packet_id: id });
+        } else if (type === 'StreamingTranslationAudioEvent') {
           totalAudioEventsReceivedRef.current++;
           console.log(`[NET RECEIVE] Total Audio Chunks Received: ${totalAudioEventsReceivedRef.current}`);
+          tracer.logEvent(PipelineEvent.AUDIO_PACKET_RECEIVED, corrId, { packet_id: id });
         }
         setAiEvents((prev) => [...prev, parsed as LiveKitAIEventPacket]);
       }
@@ -235,6 +242,8 @@ export function useLiveKit() {
 
       // Trigger temporary stop endpoint for agent connection (only if NOT reconnecting)
       if (!isReconnecting) {
+        // End tracing session and trigger trace download
+        tracer.endSession();
         try {
           await fetch('http://127.0.0.1:8000/api/audio/agent/stop', {
             method: 'POST',
@@ -327,6 +336,9 @@ export function useLiveKit() {
 
       setStatus('Connected');
       syncRemoteParticipants();
+
+      // Start tracing session
+      tracer.startSession(roomName);
 
       // Trigger temporary start endpoint for agent connection (idempotent startup)
       try {
