@@ -23,12 +23,27 @@ Both backend and frontend produce a JSON log file using the following structure:
       "event": "string (PipelineEvent Enum)",
       "component": "string (session | backend | gemini | frontend | pcm)",
       "correlation_id": "string (VAD correlation ID / Turn identifier)",
+      "event_id": "string (stable event id, format: evt_<hex>)",
       "timestamp_epoch_ms": number (float for sub-millisecond precision),
       "timestamp_monotonic_ns": number (integer nanoseconds),
       "metadata": {}
     }
   ]
 }
+
+## Phase 2.1 — Telemetry Hardening (Event Identity & Contract Freeze)
+
+Changes introduced in Phase 2.1:
+
+- Every event now contains a stable, globally-unique `event_id` (example: `evt_4f3b2a...`). This ID is generated at event emission time and must be preserved for the lifetime of the event (re-sequencing and merging may change `seq` but not `event_id`).
+- `session_trace.json` is the canonical telemetry artifact. Once a `session_trace.json` has been finalized (contains merged frontend + backend sources), it must be treated as immutable and never overwritten. Validators and the Metrics Engine may *read* this artifact but must not modify it.
+- If any transformation or enrichment is required, a separate derived artifact must be produced (for example: `session_trace.enriched.json` or `session_trace.merged.json`).
+
+Consumers and pipeline writers:
+
+- Emit `event_id` at event creation. If missing during merging, the finalizer will enrich events by generating stable `event_id`s and write them to a separate enriched artifact — the canonical `session_trace.json` will not be mutated.
+- Validators produce `trace_validation.json` and include telemetry statistics for quick health checks.
+- Phase 3 (Metrics Engine) must read these artifacts rather than modifying them.
 ```
 
 ---

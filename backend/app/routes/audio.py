@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 from ..audio.agent import start_audio_agent, stop_audio_agent
@@ -106,5 +107,21 @@ async def upload_artifacts(request: UploadArtifactsRequest):
         except Exception as e:
             logger.error(f"Failed to write console.log: {e}")
             
+    # Finalize combined trace and validation report (non-blocking dispatch)
+    try:
+        from ..audio.session_finalizer import finalize_session_trace
+        logger.info(f"[Routes] SESSION_END_RECEIVED — session_dir={session_dir} — module_file={__file__}")
+        logger.info(f"[Routes] FINALIZER_DISPATCHED — session_dir={session_dir}")
+        # Run finalizer in a thread to avoid blocking the FastAPI event loop.
+        task = asyncio.create_task(asyncio.to_thread(finalize_session_trace, session_dir))
+        def _finalizer_done_callback(t):
+            try:
+                t.result()
+                logger.info(f"[Routes] FINALIZER_COMPLETED_ASYNC — session_dir={session_dir}")
+            except Exception as e:
+                logger.exception(f"[Routes] FINALIZER_FAILED_ASYNC — session_dir={session_dir} — error={e}")
+        task.add_done_callback(_finalizer_done_callback)
+    except Exception as fe:
+        logger.exception(f"[Routes] Failed to dispatch session finalization in upload_artifacts route: {fe}")
     return {"status": "success", "session_folder": session_folder}
 

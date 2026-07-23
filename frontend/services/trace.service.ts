@@ -105,6 +105,10 @@ export class PipelineEventTracer {
       seq: this.seq,
       event,
       component,
+      // Stable event identity for cross-system tracing
+      event_id: (typeof crypto !== 'undefined' && (crypto as any).randomUUID)
+        ? `evt_${(crypto as any).randomUUID().replace(/-/g, '')}`
+        : `evt_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`,
       correlation_id: correlationId || '',
       timestamp_epoch_ms: epochMs,
       timestamp_monotonic_ns: monoNs,
@@ -203,6 +207,9 @@ export class PipelineEventTracer {
         }
         if (ev.timestamp_monotonic_ns === undefined) {
           errors.push(`Event at index ${idx} is missing timestamp_monotonic_ns`);
+        }
+        if (!ev.event_id) {
+          errors.push(`Event at index ${idx} is missing event_id`);
         }
         if (!ev.component) {
           errors.push(`Event at index ${idx} is missing component name`);

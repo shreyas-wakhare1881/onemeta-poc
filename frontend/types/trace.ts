@@ -15,6 +15,7 @@ export interface TraceEvent {
   event: PipelineEvent;
   component: string;
   correlation_id: string;
+  event_id: string;
   timestamp_epoch_ms: number;
   timestamp_monotonic_ns: number;
   metadata?: Record<string, any>;

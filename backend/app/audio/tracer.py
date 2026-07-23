@@ -1,6 +1,7 @@
 import os
 import time
 import json
+import uuid
 import logging
 from pathlib import Path
 from threading import Lock
@@ -56,6 +57,9 @@ class PipelineEventTracer:
             if event == PipelineEvent.SESSION_STARTED:
                 self._start_time_epoch_ms = int(epoch_ms)
                 
+            # Stable, globally-unique event identifier
+            ev_id = f"evt_{uuid.uuid4().hex}"
+
             self.events.append({
                 "seq": self._seq,
                 "event": event.value,
@@ -63,6 +67,7 @@ class PipelineEventTracer:
                 "correlation_id": correlation_id,
                 "timestamp_epoch_ms": epoch_ms,
                 "timestamp_monotonic_ns": mono_ns,
+                "event_id": ev_id,
                 "metadata": metadata or {}
             })
             
@@ -91,6 +96,9 @@ class PipelineEventTracer:
                 if not isinstance(ev, dict):
                     errors.append(f"Event at index {idx} is not a dictionary")
                     continue
+                # Ensure event_id exists
+                if ev.get("event_id") is None:
+                    errors.append(f"Event at index {idx} is missing event_id")
                 seq = ev.get("seq")
                 if seq is None:
                     errors.append(f"Event at index {idx} is missing sequence number (seq)")
@@ -181,24 +189,27 @@ class PipelineEventTracer:
         self._validate_trace(trace_data)
         
         if self.session_folder:
-            # 1. Save standard trace JSON as session_trace.json
-            json_filepath = self.output_dir / "session_trace.json"
-            try:
-                with open(json_filepath, "w", encoding="utf-8") as f:
-                    json.dump(trace_data, f, indent=2)
-                logger.info(f"Successfully saved session trace JSON to: {json_filepath}")
-            except Exception as e:
-                logger.error(f"Failed to save session trace JSON: {e}")
-                
-            # 2. Save readable backend event log as backend.log
-            backend_log_path = self.output_dir / "backend.log"
-            try:
-                with open(backend_log_path, "w", encoding="utf-8") as f:
-                    for ev in self.events:
-                        f.write(f"[{ev['component'].upper()}] {ev['event']} | seq={ev['seq']} | timestamp={ev['timestamp_epoch_ms']} | metadata={json.dumps(ev['metadata'])}\n")
-                logger.info(f"Successfully saved backend.log event trace to: {backend_log_path}")
-            except Exception as e:
-                logger.error(f"Failed to save backend.log event trace: {e}")
+            from .session_finalizer import get_session_lock
+            session_lock = get_session_lock(self.output_dir)
+            with session_lock:
+                # 1. Save standard trace JSON as session_trace.json
+                json_filepath = self.output_dir / "session_trace.json"
+                try:
+                    with open(json_filepath, "w", encoding="utf-8") as f:
+                        json.dump(trace_data, f, indent=2)
+                    logger.info(f"Successfully saved session trace JSON to: {json_filepath}")
+                except Exception as e:
+                    logger.error(f"Failed to save session trace JSON: {e}")
+                    
+                # 2. Save readable backend event log as backend.log
+                backend_log_path = self.output_dir / "backend.log"
+                try:
+                    with open(backend_log_path, "w", encoding="utf-8") as f:
+                        for ev in self.events:
+                            f.write(f"[{ev['component'].upper()}] {ev['event']} | seq={ev['seq']} | timestamp={ev['timestamp_epoch_ms']} | metadata={json.dumps(ev['metadata'])}\n")
+                    logger.info(f"Successfully saved backend.log event trace to: {backend_log_path}")
+                except Exception as e:
+                    logger.error(f"Failed to save backend.log event trace: {e}")
         else:
             # Legacy fallback for backwards compatibility when no active session folder is configured
             timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")

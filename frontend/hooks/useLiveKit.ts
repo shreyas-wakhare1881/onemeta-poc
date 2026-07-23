@@ -101,11 +101,24 @@ export function useLiveKit() {
       } else {
         const corrId = (packetPayload as any)?.correlation_id || '';
         if (type === 'StreamingPartialTranslationEvent') {
-          tracer.logEvent(PipelineEvent.TEXT_PACKET_RECEIVED, corrId, { packet_id: id });
+          const textPayload = packetPayload as any;
+          tracer.logEvent(PipelineEvent.TEXT_PACKET_RECEIVED, corrId, {
+            packet_id: id,
+            text_delta: textPayload?.text_delta || '',
+            text_length: (textPayload?.text_delta || '').length,
+            cumulative_text: textPayload?.cumulative_text || ''
+          });
         } else if (type === 'StreamingTranslationAudioEvent') {
           totalAudioEventsReceivedRef.current++;
           console.log(`[NET RECEIVE] Total Audio Chunks Received: ${totalAudioEventsReceivedRef.current}`);
-          tracer.logEvent(PipelineEvent.AUDIO_PACKET_RECEIVED, corrId, { packet_id: id });
+          const audioPayload = packetPayload as any;
+          const audioDataLen = audioPayload?.audio_data ? audioPayload.audio_data.length : 0;
+          tracer.logEvent(PipelineEvent.AUDIO_PACKET_RECEIVED, corrId, {
+            packet_id: id,
+            chunk_index: totalAudioEventsReceivedRef.current,
+            audio_data_b64_len: audioDataLen,
+            mime_type: audioPayload?.mime_type || 'audio/pcm'
+          });
         }
         setAiEvents((prev) => [...prev, parsed as LiveKitAIEventPacket]);
       }

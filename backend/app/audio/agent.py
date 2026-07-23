@@ -491,8 +491,23 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
         try:
             tracer.log_event(PipelineEvent.SESSION_ENDED)
             tracer.save()
+            logger.info(f"[Agent] SESSION_END_RECEIVED — output_dir={tracer.output_dir} — module_file={__file__}")
+
+            # Finalize combined trace and validation report
+            if tracer.enabled and tracer.output_dir:
+                try:
+                    from .session_finalizer import finalize_session_trace
+                    logger.info(f"[Agent] FINALIZER_STARTED — output_dir={tracer.output_dir}")
+                    try:
+                        # Run finalizer in a thread to avoid blocking the agent's event loop.
+                        await asyncio.to_thread(finalize_session_trace, tracer.output_dir)
+                        logger.info(f"[Agent] FINALIZER_COMPLETED — output_dir={tracer.output_dir}")
+                    except Exception as fe:
+                        logger.exception(f"[Agent] Failed during session finalization in agent: {fe}")
+                except Exception as e:
+                    logger.exception(f"[Agent] Failed to import or dispatch finalizer in agent: {e}")
         except Exception as e:
-            logger.error(f"Failed to log/save session trace: {e}")
+            logger.exception(f"[Agent] Failed to log/save session trace: {e}")
 
         publisher_task.cancel()
         try:
