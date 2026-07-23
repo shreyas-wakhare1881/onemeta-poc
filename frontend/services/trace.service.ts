@@ -8,6 +8,8 @@ export class PipelineEventTracer {
   private enabled = false;
   private traceLevel = 'basic';
 
+  private consoleLogs: string[] = [];
+
   constructor() {
     if (typeof window !== 'undefined') {
       // Check environment variables
@@ -15,7 +17,30 @@ export class PipelineEventTracer {
       this.enabled = String(envTrace).toLowerCase() === 'true';
       this.traceLevel = (process.env.NEXT_PUBLIC_PIPELINE_TRACE_LEVEL || 'basic').toLowerCase();
       console.log(`[Tracer Service] Pipeline tracing enabled: ${this.enabled} (level: ${this.traceLevel})`);
+      if (this.enabled) {
+        this.captureConsole();
+      }
     }
+  }
+
+  private captureConsole() {
+    if (typeof window === 'undefined') return;
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+
+    console.log = (...args: any[]) => {
+      this.consoleLogs.push(`[info] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')}`);
+      originalLog.apply(console, args);
+    };
+    console.warn = (...args: any[]) => {
+      this.consoleLogs.push(`[warn] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')}`);
+      originalWarn.apply(console, args);
+    };
+    console.error = (...args: any[]) => {
+      this.consoleLogs.push(`[error] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')}`);
+      originalError.apply(console, args);
+    };
   }
 
   public isEnabled(): boolean {
@@ -80,6 +105,10 @@ export class PipelineEventTracer {
       seq: this.seq,
       event,
       component,
+      // Stable event identity for cross-system tracing
+      event_id: (typeof crypto !== 'undefined' && (crypto as any).randomUUID)
+        ? `evt_${(crypto as any).randomUUID().replace(/-/g, '')}`
+        : `evt_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`,
       correlation_id: correlationId || '',
       timestamp_epoch_ms: epochMs,
       timestamp_monotonic_ns: monoNs,
@@ -95,7 +124,41 @@ export class PipelineEventTracer {
     if (!this.enabled || this.events.length === 0) return;
     this.logEvent(PipelineEvent.SESSION_ENDED, '');
     console.log(`[Tracer Service] Session ended. Traces captured: ${this.events.length}`);
-    this.downloadTrace();
+    this.uploadArtifacts();
+  }
+
+  private async uploadArtifacts() {
+    try {
+      const endEpochMs = this.events.length > 0 
+        ? this.events[this.events.length - 1].timestamp_epoch_ms 
+        : Date.now();
+
+      const traceData: PipelineTrace = {
+        trace_version: 1,
+        session: {
+          session_id: this.sessionId,
+          start_time_epoch_ms: this.startTimeEpochMs,
+          end_time_epoch_ms: endEpochMs
+        },
+        events: this.events
+      };
+
+      this.validateTrace(traceData);
+
+      const base = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+      await fetch(`${base}/api/audio/session/upload_artifacts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          room_name: this.sessionId,
+          frontend_trace: traceData,
+          console_logs: this.consoleLogs
+        })
+      });
+      console.log('[Tracer Service] Successfully uploaded session artifacts to backend.');
+    } catch (e) {
+      console.error('[Tracer Service] Failed to upload session artifacts:', e);
+    }
   }
 
   private validateTrace(traceData: PipelineTrace): boolean {
@@ -145,6 +208,9 @@ export class PipelineEventTracer {
         if (ev.timestamp_monotonic_ns === undefined) {
           errors.push(`Event at index ${idx} is missing timestamp_monotonic_ns`);
         }
+        if (!ev.event_id) {
+          errors.push(`Event at index ${idx} is missing event_id`);
+        }
         if (!ev.component) {
           errors.push(`Event at index ${idx} is missing component name`);
         }
@@ -159,51 +225,6 @@ export class PipelineEventTracer {
       return false;
     }
     return true;
-  }
-
-  private downloadTrace() {
-    try {
-      const endEpochMs = this.events.length > 0 
-        ? this.events[this.events.length - 1].timestamp_epoch_ms 
-        : Date.now();
-
-      const traceData: PipelineTrace = {
-        trace_version: 1,
-        session: {
-          session_id: this.sessionId,
-          start_time_epoch_ms: this.startTimeEpochMs,
-          end_time_epoch_ms: endEpochMs
-        },
-        events: this.events
-      };
-
-      // Perform validation check (validation errors are logged, but download is still attempted)
-      this.validateTrace(traceData);
-
-      // Format timestamp for filename: yyyyMMdd_HHmmss
-      const date = new Date(this.startTimeEpochMs);
-      const yyyy = date.getFullYear();
-      const MM = String(date.getMonth() + 1).padStart(2, '0');
-      const dd = String(date.getDate()).padStart(2, '0');
-      const HH = String(date.getHours()).padStart(2, '0');
-      const mm = String(date.getMinutes()).padStart(2, '0');
-      const ss = String(date.getSeconds()).padStart(2, '0');
-      const timestampStr = `${yyyy}${MM}${dd}_${HH}${mm}${ss}`;
-
-      const filename = `session_${this.sessionId || 'unknown'}_${timestampStr}.json`;
-      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(traceData, null, 2));
-      
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute('href', dataStr);
-      downloadAnchor.setAttribute('download', filename);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-      
-      console.log(`[Tracer Service] Triggered automatic browser download for trace: ${filename}`);
-    } catch (e) {
-      console.error('[Tracer Service] Failed to serialize and download trace:', e);
-    }
   }
 }
 
