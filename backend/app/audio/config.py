@@ -19,7 +19,7 @@ class AudioConfig:
     # VAD & Chunking Configuration (Hysteresis Thresholds)
     vad_start_threshold_energy: float = float(os.getenv("VAD_START_THRESHOLD_ENERGY", "550.0"))
     vad_stop_threshold_energy: float = float(os.getenv("VAD_STOP_THRESHOLD_ENERGY", "400.0"))
-    silence_timeout_sec: float = float(os.getenv("SILENCE_TIMEOUT_SEC", "0.2"))
+    silence_timeout_sec: float = float(os.getenv("SILENCE_TIMEOUT_SEC", "1.2"))
     max_chunk_duration_sec: float = float(os.getenv("MAX_CHUNK_DURATION_SEC", "0.3"))
 
     # Chunk Sink Bounded Queue Configuration

@@ -318,7 +318,9 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
                                     session_time_ms=0.0,
                                     audio_data=audio_data,
                                     mime_type="audio/pcm",
-                                    correlation_id=self._current_correlation_id
+                                    correlation_id=self._current_correlation_id,
+                                    chunk_index=self._received_audio_count,
+                                    is_final=bool(getattr(content, 'turn_complete', False))
                                 )
                             )
                             

@@ -38,7 +38,7 @@ class PipelineEventTracer:
     def _determine_component(self, event: PipelineEvent) -> str:
         if event in (PipelineEvent.SESSION_STARTED, PipelineEvent.SESSION_ENDED):
             return "session"
-        elif event in (PipelineEvent.MIC_FRAME_RECEIVED, PipelineEvent.VAD_DECISION, PipelineEvent.TEXT_PUBLISHED, PipelineEvent.AUDIO_PUBLISHED, PipelineEvent.PIPELINE_ERROR):
+        elif event in (PipelineEvent.MIC_FRAME_RECEIVED, PipelineEvent.VAD_DECISION, PipelineEvent.TEXT_PUBLISHED, PipelineEvent.AUDIO_PUBLISHED, PipelineEvent.PIPELINE_ERROR, PipelineEvent.CLIENT_TELEMETRY_RECEIVED, PipelineEvent.SERVER_PACING_APPLIED, PipelineEvent.SERVER_PACING_RELEASED, PipelineEvent.SERVER_PACING_DROPPED):
             return "backend"
         elif event in (PipelineEvent.AUDIO_SENT_TO_GEMINI, PipelineEvent.GEMINI_WS_FRAME_RECEIVED, PipelineEvent.TRANSLATED_TEXT_RECEIVED, PipelineEvent.TRANSLATED_AUDIO_RECEIVED):
             return "gemini"

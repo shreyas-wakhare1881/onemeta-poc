@@ -18,9 +18,6 @@ export default function Home() {
   const [roomNameInput, setRoomNameInput] = useState<string>('onemeta-demo');
   const [identityInput, setIdentityInput] = useState<string>('User-A');
 
-  // Experiment: Allow playing translation of own voice (local testing)
-  const [hearOwnTranslation, setHearOwnTranslation] = useState<boolean>(true);
-
   // Audio / translation text state slices
   const [englishTranscript, setEnglishTranscript] = useState<string>('');
   const [useGeminiAsr, setUseGeminiAsr] = useState<boolean>(false);
@@ -30,6 +27,9 @@ export default function Home() {
   }, [useGeminiAsr]);
   const [spanishTranslation, setSpanishTranslation] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Experiment: Allow playing translation of own voice (local testing)
+  const [hearOwnTranslation, setHearOwnTranslation] = useState<boolean>(true);
 
   // Pipeline execution state slices
   const [playbackState, setPlaybackState] = useState<'idle' | 'playing'>('idle');
@@ -44,6 +44,22 @@ export default function Home() {
   const totalAudioEventsPlayedRef = useRef(0);
   const processedEventsCountRef = useRef(0);
 
+  // Refs mirroring state for direct audio dispatch in useLiveKit (avoid stale closures).
+  // Declared BEFORE the useEffect hooks that sync them, and BEFORE useLiveKit() which
+  // receives them — React requires all hooks/refs to be declared before use.
+  const hearOwnTranslationRef = useRef<boolean>(true);
+  const identityRef = useRef<string>('User-A');
+
+  // Keep hearOwnTranslationRef synced with state (ref used for direct dispatch in useLiveKit)
+  useEffect(() => {
+    hearOwnTranslationRef.current = hearOwnTranslation;
+  }, [hearOwnTranslation]);
+
+  // Keep identityRef synced with identityInput (ref used for direct dispatch in useLiveKit)
+  useEffect(() => {
+    identityRef.current = identityInput;
+  }, [identityInput]);
+
   const {
     status,
     error,
@@ -53,7 +69,7 @@ export default function Home() {
     disconnect,
     toggleMicrophone,
     totalAudioEventsReceivedRef,
-  } = useLiveKit();
+  } = useLiveKit(hearOwnTranslationRef, identityRef);
 
   const isConnected = status === 'Connected';
   const isConnecting = status === 'Connecting';
@@ -261,14 +277,11 @@ export default function Home() {
         console.log(`[UI PROCESS] Event Index: ${totalAudioEventsPlayedRef.current} | Net Received: ${totalAudioEventsReceivedRef?.current} | PCM playChunk() Called: ${pcmPlayer.playChunkCalledCount} | PCM Scheduled: ${pcmPlayer.playChunkScheduledCount} | PCM Playback Start Events: ${pcmPlayer.playbackStartEventCount} | PCM Playback End Events: ${pcmPlayer.playbackEndEventCount}`);
         const audioData = event.payload.audio_data || '';
         const participantIdentity = event.payload.participant_identity || '';
-        // Echo Cancellation (Suggestion 3): 
-        // Only play the translated audio if it was NOT originally spoken by the local participant, or if loopback is enabled.
-        if (audioData && (hearOwnTranslation || participantIdentity !== identityInput)) {
-          addLog(`StreamingTranslationAudioEvent received (${audioData.length} chars) from speaker ${participantIdentity}`);
-          const correlationId = event.payload.correlation_id || '';
-          pcmPlayer.playChunk(audioData, correlationId);
-        } else if (audioData) {
-          addLog(`Echo Cancellation: Ignored playing our own translation audio.`);
+        // Audio playback is handled directly in useLiveKit.ts (handleDataReceived)
+        // via Direct Audio Dispatch — playChunk() was called synchronously before this
+        // useEffect ran. This branch is preserved for metrics/logging only.
+        if (audioData) {
+          addLog(`StreamingTranslationAudioEvent received (${audioData.length} chars) from speaker ${participantIdentity} — dispatched directly`);
         }
       }
       
