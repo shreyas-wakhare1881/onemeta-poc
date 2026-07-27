@@ -113,6 +113,8 @@ class StreamingTranslationAudioEvent:
     mime_type: str
     correlation_id: str = ""
     participant_identity: str = ""
+    chunk_index: int = 0
+    is_final: bool = False
 
 
 @dataclass(frozen=True)

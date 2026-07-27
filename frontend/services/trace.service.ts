@@ -76,7 +76,11 @@ export class PipelineEventTracer {
       event === PipelineEvent.PCM_DECODE_STARTED || 
       event === PipelineEvent.PCM_DECODE_COMPLETED || 
       event === PipelineEvent.AUDIO_SCHEDULED || 
-      event === PipelineEvent.AUDIO_PLAYBACK_SCHEDULED
+      event === PipelineEvent.AUDIO_PLAYBACK_SCHEDULED ||
+      event === PipelineEvent.AUDIO_PLAYBACK_STARTED ||
+      event === PipelineEvent.AUDIO_PLAYBACK_COMPLETED ||
+      event === PipelineEvent.AUDIO_CONTEXT_STATE ||
+      event === PipelineEvent.NEXT_PLAYTIME_UPDATED
     ) {
       return 'pcm';
     }

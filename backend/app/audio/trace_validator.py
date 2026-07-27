@@ -30,6 +30,12 @@ VALID_FRONTEND_EVENTS = {
     "PCM_DECODE_COMPLETED",
     "AUDIO_SCHEDULED",
     "AUDIO_PLAYBACK_SCHEDULED",
+    "AUDIO_PLAYBACK_STARTED",
+    "AUDIO_PLAYBACK_COMPLETED",
+    "AUDIO_CONTEXT_STATE",
+    "NEXT_PLAYTIME_UPDATED",
+    "PLAYBACK_TRIM_APPLIED",
+    "PLAYBACK_DROP_DECISION",
 }
 
 ALL_VALID_EVENTS = VALID_BACKEND_EVENTS | VALID_FRONTEND_EVENTS
@@ -53,6 +59,12 @@ REQUIRED_METADATA: Dict[str, List[str]] = {
     "PCM_DECODE_COMPLETED":     ["sample_rate", "channels", "duration_sec"],
     "AUDIO_SCHEDULED":          ["scheduled_time_sec", "delay_sec"],
     "AUDIO_PLAYBACK_SCHEDULED": ["scheduled_time_sec"],
+    "AUDIO_PLAYBACK_STARTED":   ["scheduled_time_sec"],
+    "AUDIO_PLAYBACK_COMPLETED": ["scheduled_time_sec"],
+    "AUDIO_CONTEXT_STATE":      ["state"],
+    "NEXT_PLAYTIME_UPDATED":    ["next_play_time_before", "next_play_time_after", "increment"],
+    "PLAYBACK_DROP_DECISION":   ["reason"],
+    "PLAYBACK_TRIM_APPLIED":    ["reason"],
 }
 
 # Semantic lifecycle rules: (first_event, second_event)
@@ -61,6 +73,8 @@ LIFECYCLE_RULES = [
     ("PCM_DECODE_STARTED",        "PCM_DECODE_COMPLETED"),
     ("PCM_DECODE_COMPLETED",      "AUDIO_SCHEDULED"),
     ("AUDIO_SCHEDULED",           "AUDIO_PLAYBACK_SCHEDULED"),
+    ("AUDIO_PLAYBACK_SCHEDULED", "AUDIO_PLAYBACK_STARTED"),
+    ("AUDIO_PLAYBACK_STARTED",   "AUDIO_PLAYBACK_COMPLETED"),
     ("GEMINI_WS_FRAME_RECEIVED",  "TRANSLATED_AUDIO_RECEIVED"),
     ("TRANSLATED_TEXT_RECEIVED",  "TEXT_PUBLISHED"),
     ("TRANSLATED_AUDIO_RECEIVED", "AUDIO_PUBLISHED"),

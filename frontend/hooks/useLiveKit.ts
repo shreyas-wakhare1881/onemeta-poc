@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import type { RefObject } from 'react';
 import { createRoom, connectRoom, disconnectRoom, stopLocalTracks } from '../services/livekit.service';
 import { getLiveKitToken } from '../services/api';
 import { tracer } from '../services/trace.service';
 import { PipelineEvent } from '../types/trace';
+import { pcmPlayer } from '../services/pcmPlayer.service';
 import { 
   RoomEvent, 
   Room, 
@@ -15,7 +17,10 @@ import {
 } from 'livekit-client';
 import type { RoomConnectionState, ParticipantInfo, LiveKitAIEventPacket, TelemetryUpdatePayload } from '../types/livekit';
 
-export function useLiveKit() {
+export function useLiveKit(
+  hearOwnTranslationRef: RefObject<boolean>,
+  identityRef: RefObject<string>
+) {
   const [status, setStatus] = useState<RoomConnectionState>('Disconnected');
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +41,7 @@ export function useLiveKit() {
 
   // Experiment: Audio packets received count ref
   const totalAudioEventsReceivedRef = useRef(0);
+  const prevAudioReceivedRef = useRef(0);
 
   // Room instance ref
   const roomRef = useRef<Room | null>(null);
@@ -113,19 +119,51 @@ export function useLiveKit() {
           console.log(`[NET RECEIVE] Total Audio Chunks Received: ${totalAudioEventsReceivedRef.current}`);
           const audioPayload = packetPayload as any;
           const audioDataLen = audioPayload?.audio_data ? audioPayload.audio_data.length : 0;
-          tracer.logEvent(PipelineEvent.AUDIO_PACKET_RECEIVED, corrId, {
-            packet_id: id,
-            chunk_index: totalAudioEventsReceivedRef.current,
-            audio_data_b64_len: audioDataLen,
-            mime_type: audioPayload?.mime_type || 'audio/pcm'
-          });
+            let chunkIndex = totalAudioEventsReceivedRef.current;
+            // Propagate packet_id and chunk_index into the packet payload so downstream
+            // consumers (UI / PCM player) can attach per-packet instrumentation tags.
+            try {
+              audioPayload.packet_id = id;
+              // Prefer server-provided chunk_index if present; otherwise attach our incremental index
+              if (audioPayload.chunk_index === undefined || audioPayload.chunk_index === null) {
+                audioPayload.chunk_index = chunkIndex;
+              } else {
+                chunkIndex = audioPayload.chunk_index;
+              }
+            } catch (err) {
+              // ignore immutability errors
+            }
+
+            tracer.logEvent(PipelineEvent.AUDIO_PACKET_RECEIVED, corrId, {
+              packet_id: id,
+              chunk_index: chunkIndex,
+              audio_data_b64_len: audioDataLen,
+              mime_type: audioPayload?.mime_type || 'audio/pcm'
+            });
+
+            // ─── DIRECT AUDIO DISPATCH ───────────────────────────────────────────────
+            // Dispatch audio to Web Audio API IMMEDIATELY — before React state update.
+            // This bypasses the React render cycle (16–33ms batching delay per chunk)
+            // that previously existed when playChunk was called inside useEffect.
+            // Refs are used instead of state to avoid stale closure values.
+            const audioData = audioPayload?.audio_data || '';
+            const participantIdentity = audioPayload?.participant_identity || '';
+            const currentHearOwn = hearOwnTranslationRef.current ?? true;
+            const currentIdentity = identityRef.current ?? '';
+            if (audioData && (currentHearOwn || participantIdentity !== currentIdentity)) {
+              console.log(`[DIRECT DISPATCH] Dispatching audio chunk ${chunkIndex} to pcmPlayer immediately (bypass React)`);
+              pcmPlayer.playChunk(audioData, corrId, id, chunkIndex);
+            } else if (audioData) {
+              console.log(`[DIRECT DISPATCH] Echo Cancellation: Suppressed own translation audio chunk ${chunkIndex}`);
+            }
+            // ────────────────────────────────────────────────────────────────────────
         }
         setAiEvents((prev) => [...prev, parsed as LiveKitAIEventPacket]);
       }
     } catch (e) {
       console.error('Failed to parse received data packet:', e);
     }
-  }, []);
+  }, [hearOwnTranslationRef, identityRef]);
 
   // Connection State handler
   const handleStateChange = useCallback((state: string) => {
@@ -404,6 +442,53 @@ export function useLiveKit() {
   useEffect(() => {
     connectRef.current = connect;
   }, [connect]);
+
+  // Periodically publish client-side telemetry (backlog, queue depth, drops) to the agent via LiveKit data channel
+  useEffect(() => {
+    let telemetryInterval: NodeJS.Timeout | null = null;
+    if (status === 'Connected') {
+      prevAudioReceivedRef.current = totalAudioEventsReceivedRef.current;
+      telemetryInterval = setInterval(async () => {
+        try {
+          const room = roomRef.current;
+          if (!room || !room.localParticipant) return;
+
+          const prev = prevAudioReceivedRef.current || 0;
+          const curr = totalAudioEventsReceivedRef.current || 0;
+          const arrival_rate = Math.max(0, curr - prev);
+          prevAudioReceivedRef.current = curr;
+
+          const clientStats = pcmPlayer && typeof pcmPlayer.getStats === 'function' ? pcmPlayer.getStats() : {};
+
+          const packet = {
+            id: (crypto && typeof (crypto as any).randomUUID === 'function') ? (crypto as any).randomUUID() : `ct-${Math.random().toString(36).slice(2)}`,
+            version: 1,
+            type: 'ClientTelemetry',
+            timestamp: Date.now(),
+            payload: {
+              client: clientStats,
+              arrival_rate: arrival_rate,
+              connection_state: status
+            }
+          };
+
+          const encoded = new TextEncoder().encode(JSON.stringify(packet));
+          try {
+            // publishData signature may vary across SDK versions; cast to any to avoid TS constraints
+            (room.localParticipant as any).publishData(encoded, { reliable: true, topic: 'ClientTelemetry' });
+          } catch (e) {
+            // Best-effort publish; ignore errors to avoid noisy UI
+            console.warn('Client telemetry publish failed:', e);
+          }
+        } catch (e) {
+          console.warn('Telemetry interval error:', e);
+        }
+      }, 1000);
+    }
+    return () => {
+      if (telemetryInterval) clearInterval(telemetryInterval);
+    };
+  }, [status]);
 
   const disconnect = useCallback(async () => {
     connectionParamsRef.current = null;

@@ -15,7 +15,15 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("onemeta.benchmark_engine")
 
-BENCHMARK_VERSION = "1.0.0"
+BENCHMARK_VERSION = "2.0.0"
+
+# Streaming score thresholds
+_STREAMING_SCORE_LABELS = [
+    (95, "Excellent — Gemini Live quality"),
+    (80, "Good"),
+    (60, "Noticeable pauses"),
+    (0, "Poor streaming"),
+]
 
 
 def _compute_stats(values: List[float], percentiles: List[int] = []) -> Dict[str, Optional[float]]:
@@ -247,6 +255,283 @@ def _generate_recommendations(
         recs.append(f"Session health is excellent with a success rate of {round(success_rate, 1)}%.")
 
     return recs
+
+
+def _compute_streaming_score(
+    average_gap_ms: Optional[float],
+    maximum_gap_ms: Optional[float],
+    restart_count: int,
+    starvation_count: int,
+    total_chunks: int
+) -> Dict[str, Any]:
+    """Compute a 0–100 Continuous Audio Streaming Score.
+
+    Formula (deterministic, reproducible):
+      Base score = 100
+      Penalty for average_gap_ms:
+        - gap < 30ms   : no penalty
+        - gap 30-100ms : linear 0-10 pts
+        - gap 100-300ms: linear 10-30 pts
+        - gap > 300ms  : 30 pts
+      Penalty for maximum_gap_ms:
+        - max_gap > 500ms  (restart threshold): -10 pts
+        - max_gap > 1000ms : additional -10 pts
+        - max_gap > 2000ms : additional -5 pts
+      Penalty for restart_count:
+        - 1 per restart up to -20 pts max (each restart = -4 pts)
+      Penalty for starvation_count:
+        - 1 per starvation up to -10 pts max (each = -2 pts)
+    Total clamped to [0, 100].
+    """
+    if total_chunks == 0:
+        return {"streaming_score": 0, "streaming_grade": "N/A", "streaming_label": "No data"}
+
+    score = 100.0
+
+    # Average gap penalty
+    if average_gap_ms is not None:
+        if average_gap_ms >= 300.0:
+            score -= 30.0
+        elif average_gap_ms >= 100.0:
+            # Linear interpolation: 10 pts at 100ms, 30 pts at 300ms
+            score -= 10.0 + (average_gap_ms - 100.0) / 200.0 * 20.0
+        elif average_gap_ms >= 30.0:
+            # Linear interpolation: 0 pts at 30ms, 10 pts at 100ms
+            score -= (average_gap_ms - 30.0) / 70.0 * 10.0
+
+    # Maximum gap penalty
+    if maximum_gap_ms is not None:
+        if maximum_gap_ms > 2000.0:
+            score -= 25.0
+        elif maximum_gap_ms > 1000.0:
+            score -= 20.0
+        elif maximum_gap_ms > 500.0:
+            score -= 10.0
+
+    # Restart penalty (each restart = -4 pts, max -20)
+    score -= min(restart_count * 4.0, 20.0)
+
+    # Starvation penalty (each starvation = -2 pts, max -10)
+    score -= min(starvation_count * 2.0, 10.0)
+
+    score = max(0.0, min(100.0, score))
+    score_int = int(round(score))
+
+    # Determine grade label
+    grade = "Poor"
+    label = "Poor streaming"
+    for threshold, lbl in _STREAMING_SCORE_LABELS:
+        if score_int >= threshold:
+            if score_int >= 98:
+                grade = "A+"
+            elif score_int >= 90:
+                grade = "A"
+            elif score_int >= 80:
+                grade = "B"
+            elif score_int >= 60:
+                grade = "C"
+            else:
+                grade = "D"
+            label = lbl
+            break
+
+    return {
+        "streaming_score": score_int,
+        "streaming_grade": grade,
+        "streaming_label": label
+    }
+
+
+def _compute_executive_summary(
+    per_correlation: Dict[str, Any],
+    playback_stats: Dict[str, Optional[float]],
+    text_first_response_stats: Dict[str, Optional[float]],
+    audio_first_response_stats: Dict[str, Optional[float]],
+    streaming_continuity: Optional[Dict[str, Any]],
+    overall_grade: str,
+    overall_score: int
+) -> Dict[str, Any]:
+    """Build the executive_summary block for benchmark.json.
+
+    KPI derivation:
+      TTFT  = time_to_first_text_render_ms (preferred) or time_to_first_text_arrival_ms
+              across all correlations that have MIC_FRAME_RECEIVED data.
+      TTFA  = time_to_first_audio_playback_ms (MIC -> AUDIO_PLAYBACK_STARTED)
+              across all correlations that have both events.
+      Streaming score = computed by _compute_streaming_score from streaming_continuity.
+      Playback scheduling = playback_stats (existing, repackaged with P95).
+      Translation accuracy = placeholder for future BLEU/COMET/BERTScore integration.
+    """
+    # Collect TTFT values across correlations
+    ttft_vals: List[float] = []
+    # Collect TTFA (playback-grade) values across correlations
+    ttfa_vals: List[float] = []
+
+    for c_data in per_correlation.values():
+        m = c_data.get("metrics") or {}
+
+        # TTFT: prefer render-visible (MIC -> REACT_RENDER_COMPLETED)
+        ttft = m.get("time_to_first_text_render_ms")
+        if ttft is None:
+            ttft = m.get("time_to_first_text_arrival_ms")
+        if ttft is not None and ttft > 0:
+            ttft_vals.append(ttft)
+
+        # TTFA: KPI-grade (MIC -> AUDIO_PLAYBACK_STARTED)
+        ttfa = m.get("time_to_first_audio_playback_ms")
+        if ttfa is None:
+            # Fallback: frontend receive (coarser)
+            ttfa = m.get("time_to_first_audio_frontend_ms")
+        if ttfa is not None and ttfa > 0:
+            ttfa_vals.append(ttfa)
+
+    ttft_stats = _compute_stats(ttft_vals, [95])
+    ttfa_stats = _compute_stats(ttfa_vals, [95])
+    playback_p95_stats = _compute_stats(
+        [v for v in [
+            playback_stats.get("min"),
+            playback_stats.get("max"),
+            playback_stats.get("average"),
+            playback_stats.get("median")
+        ] if v is not None],
+        [95]
+    ) if playback_stats.get("average") is not None else {}
+
+    # Streaming continuity
+    sc = streaming_continuity or {}
+    total_chunks = sc.get("total_playback_chunks", 0)
+    avg_gap = sc.get("average_gap_ms")
+    max_gap = sc.get("maximum_gap_ms")
+    restart_count = sc.get("restart_count", 0)
+    starvation_count = sc.get("starvation_count", 0)
+
+    streaming_score_data = _compute_streaming_score(
+        average_gap_ms=avg_gap,
+        maximum_gap_ms=max_gap,
+        restart_count=restart_count,
+        starvation_count=starvation_count,
+        total_chunks=total_chunks
+    )
+
+    # Executive overall grade (uses existing performance score)
+    exec_grade = overall_grade
+    if streaming_score_data["streaming_score"] >= 95 and overall_score >= 90:
+        exec_grade = "A+"
+
+    return {
+        "ttft": {
+            "description": "Time from User Speech Start to first translated text available",
+            "formula": "MIC_FRAME_RECEIVED -> first TEXT_PACKET_RECEIVED or REACT_RENDER_COMPLETED",
+            "average_ms": ttft_stats.get("average"),
+            "median_ms": ttft_stats.get("median"),
+            "min_ms": ttft_stats.get("min"),
+            "max_ms": ttft_stats.get("max"),
+            "p95_ms": ttft_stats.get("p95"),
+            "sample_count": len(ttft_vals)
+        },
+        "ttfa": {
+            "description": "Time from User Speech Start to first translated audio actually playing",
+            "formula": "MIC_FRAME_RECEIVED -> first AUDIO_PLAYBACK_STARTED (actual playback, not scheduled)",
+            "average_ms": ttfa_stats.get("average"),
+            "median_ms": ttfa_stats.get("median"),
+            "min_ms": ttfa_stats.get("min"),
+            "max_ms": ttfa_stats.get("max"),
+            "p95_ms": ttfa_stats.get("p95"),
+            "sample_count": len(ttfa_vals)
+        },
+        "continuous_audio_streaming": {
+            "description": "Did translated audio continuously stream while the user was still speaking?",
+            "formula": "gap_ms[i] = AUDIO_PLAYBACK_STARTED[i].epoch_ms - AUDIO_PLAYBACK_STARTED[i-1].epoch_ms - chunk_duration_ms[i-1]. restart = gap > 500ms.",
+            "streaming_score": streaming_score_data["streaming_score"],
+            "streaming_grade": streaming_score_data["streaming_grade"],
+            "streaming_label": streaming_score_data["streaming_label"],
+            "average_gap_ms": avg_gap,
+            "maximum_gap_ms": max_gap,
+            "median_gap_ms": sc.get("median_gap_ms"),
+            "p95_gap_ms": sc.get("p95_gap_ms"),
+            "total_playback_chunks": total_chunks,
+            "playback_restart_count": restart_count,
+            "playback_starvation_count": starvation_count,
+            "restart_threshold_ms": sc.get("restart_threshold_ms", 500.0)
+        },
+        "playback_scheduling": {
+            "description": "Time from audio packet received at client to actual playback scheduling",
+            "formula": "AUDIO_PACKET_RECEIVED -> AUDIO_PLAYBACK_SCHEDULED, per packet",
+            "average_ms": playback_stats.get("average"),
+            "median_ms": playback_stats.get("median"),
+            "p95_ms": playback_stats.get("p95"),
+            "max_ms": playback_stats.get("max")
+        },
+        "translation_accuracy": {
+            "description": "Pluggable translation quality metric. Supports BLEU, COMET, SacreBLEU, BERTScore, Gemini Judge.",
+            "status": "N/A",
+            "metric": "Future Integration",
+            "supported_evaluators": ["BLEU", "COMET", "SacreBLEU", "BERTScore", "Gemini Judge", "Human Evaluation"]
+        },
+        "overall_grade": exec_grade,
+        "overall_score": overall_score
+    }
+
+
+def _print_executive_summary(summary: Dict[str, Any], session_id: Optional[str]) -> None:
+    """Log the formatted ASCII Executive Benchmark Summary after every session."""
+    ttft = summary.get("ttft", {})
+    ttfa = summary.get("ttfa", {})
+    cas = summary.get("continuous_audio_streaming", {})
+    ps = summary.get("playback_scheduling", {})
+    ta = summary.get("translation_accuracy", {})
+    grade = summary.get("overall_grade", "N/A")
+    score = summary.get("overall_score", 0)
+
+    def _fmt(v: Optional[float], unit: str = "ms") -> str:
+        return f"{v:.1f} {unit}" if v is not None else "N/A"
+
+    lines = [
+        "=" * 58,
+        f"  Speech-to-Speech Executive Benchmark Summary",
+        f"  Session: {session_id or 'unknown'}",
+        "=" * 58,
+        "",
+        "  KPI 1 — TTFT (Time To First Text)",
+        f"    Average  : {_fmt(ttft.get('average_ms'))}",
+        f"    Median   : {_fmt(ttft.get('median_ms'))}",
+        f"    P95      : {_fmt(ttft.get('p95_ms'))}",
+        f"    Min/Max  : {_fmt(ttft.get('min_ms'))} / {_fmt(ttft.get('max_ms'))}",
+        f"    Samples  : {ttft.get('sample_count', 0)}",
+        "",
+        "  KPI 2 — TTFA (Time To First Audio Playback)",
+        f"    Average  : {_fmt(ttfa.get('average_ms'))}",
+        f"    Median   : {_fmt(ttfa.get('median_ms'))}",
+        f"    P95      : {_fmt(ttfa.get('p95_ms'))}",
+        f"    Min/Max  : {_fmt(ttfa.get('min_ms'))} / {_fmt(ttfa.get('max_ms'))}",
+        f"    Samples  : {ttfa.get('sample_count', 0)}",
+        "",
+        "  KPI 3 — Continuous Audio Streaming",
+        f"    Score    : {cas.get('streaming_score', 0)} / 100  [{cas.get('streaming_grade', 'N/A')}]",
+        f"    Label    : {cas.get('streaming_label', 'N/A')}",
+        f"    Avg Gap  : {_fmt(cas.get('average_gap_ms'))}",
+        f"    Max Gap  : {_fmt(cas.get('maximum_gap_ms'))}",
+        f"    Restarts : {cas.get('playback_restart_count', 0)}",
+        f"    Starvations: {cas.get('playback_starvation_count', 0)}",
+        f"    Chunks   : {cas.get('total_playback_chunks', 0)}",
+        "",
+        "  KPI 4 — Playback Scheduling Delay",
+        f"    Average  : {_fmt(ps.get('average_ms'))}",
+        f"    Median   : {_fmt(ps.get('median_ms'))}",
+        f"    P95      : {_fmt(ps.get('p95_ms'))}",
+        f"    Max      : {_fmt(ps.get('max_ms'))}",
+        "",
+        "  KPI 5 — Translation Accuracy",
+        f"    Status   : {ta.get('status', 'N/A')}",
+        f"    Metric   : {ta.get('metric', 'Future Integration')}",
+        "",
+        "  Overall Session Grade",
+        f"    Grade    : {grade}   (Score: {score}/100)",
+        "",
+        "=" * 58,
+    ]
+    for line in lines:
+        logger.info(f"[ExecutiveSummary] {line}")
 
 
 def generate_benchmark(session_dir: Path) -> None:
@@ -516,6 +801,31 @@ def generate_benchmark(session_dir: Path) -> None:
             "recommendations": recommendations
         }
     }
+
+    # ──────────────────────────────────────────────────────────
+    # EXECUTIVE KPI SUMMARY
+    # Computed from:
+    #   - per_correlation metrics (TTFT, TTFA via time_to_first_audio_playback_ms)
+    #   - streaming_continuity block (gap analysis, restart/starvation counts)
+    #   - playback_stats (scheduling delay with P95)
+    #   - translation_accuracy = placeholder (future BLEU/COMET/Gemini Judge)
+    # ──────────────────────────────────────────────────────────
+    streaming_continuity = metrics_json.get("streaming_continuity") or {}
+    playback_stats_with_p95 = _compute_stats(playback_vals, [95])
+
+    executive_summary = _compute_executive_summary(
+        per_correlation=per_correlation,
+        playback_stats=playback_stats_with_p95,
+        text_first_response_stats=text_first_response_stats,
+        audio_first_response_stats=audio_first_response_stats,
+        streaming_continuity=streaming_continuity,
+        overall_grade=perf_score.get("overall", "N/A"),
+        overall_score=perf_score.get("score", 0)
+    )
+    benchmark_data["executive_summary"] = executive_summary
+
+    # Log the ASCII executive dashboard
+    _print_executive_summary(executive_summary, session_id)
 
     try:
         with open(benchmark_path, "w", encoding="utf-8") as f:

@@ -3,6 +3,7 @@ import logging
 import uuid
 import json
 import time
+import os
 import base64
 from livekit import rtc
 from .. import config
@@ -116,6 +117,17 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
     PACKET_PROTOCOL_VERSION = 1
     publish_queue = asyncio.Queue(maxsize=audio_config.publisher_queue_size)
 
+    # Runtime client telemetry map (participant_identity -> telemetry dict)
+    client_backlog_map = {}
+
+    # Server pacing tunables (milliseconds). Tunable via env vars.
+    # Aligned with client-side MAX_CLIENT_BUFFER_MS (80ms) to ensure server pacing
+    # and client drop thresholds are consistent — preventing packets from being held
+    # server-side longer than the client can absorb.
+    TARGET_CLIENT_BUFFER_MS = int(os.getenv("SERVER_TARGET_CLIENT_BUFFER_MS", "80"))
+    PACING_MAX_HOLD_MS = int(os.getenv("SERVER_PACING_MAX_HOLD_MS", "50"))
+    PACING_HOLD_STEP_MS = int(os.getenv("SERVER_PACING_HOLD_STEP_MS", "10"))
+
     published_packets = 0
     retried_packets = 0
     dropped_packets = 0
@@ -139,6 +151,98 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
                 else:
                     packet_data = packet_item
                     destination_identities = None
+                # Best-effort parse JSON packet to inspect type and metadata
+                parsed_packet = None
+                corr_id = ""
+                pkt_type = None
+                try:
+                    if isinstance(packet_data, (bytes, bytearray)):
+                        parsed_packet = json.loads(packet_data.decode('utf-8'))
+                    elif isinstance(packet_data, str):
+                        parsed_packet = json.loads(packet_data)
+                    elif isinstance(packet_data, dict):
+                        parsed_packet = packet_data
+                except Exception:
+                    parsed_packet = None
+
+                if parsed_packet:
+                    try:
+                        corr_id = parsed_packet.get("payload", {}).get("correlation_id", "")
+                    except Exception:
+                        corr_id = ""
+                    pkt_type = parsed_packet.get('type')
+
+                # Server-paced gating for audio packets
+                drop_now = False
+                if pkt_type == 'StreamingTranslationAudioEvent' or (isinstance(packet_data, (bytes, bytearray)) and b'StreamingTranslationAudioEvent' in packet_data):
+                    # Determine destinations to consult for backlog; default to all remote participants
+                    dests = destination_identities if destination_identities else [p.identity for p in room.remote_participants.values()]
+                    dest_str = ", ".join(dests) if dests else "broadcast"
+                    # compute current max backlog among destinations
+                    dest_backlogs = [client_backlog_map.get(d, {}).get('backlog_ms', 0) for d in dests] if dests else [0]
+                    max_backlog = max(dest_backlogs) if dest_backlogs else 0
+
+                    if max_backlog > TARGET_CLIENT_BUFFER_MS:
+                        # Log pacing applied
+                        if tracer and tracer.enabled and parsed_packet:
+                            tracer.log_event(
+                                PipelineEvent.SERVER_PACING_APPLIED,
+                                correlation_id=corr_id,
+                                metadata={
+                                    "destination": dest_str,
+                                    "backlog_ms": max_backlog,
+                                    "threshold_ms": TARGET_CLIENT_BUFFER_MS,
+                                    "packet_id": parsed_packet.get('id', ''),
+                                    "chunk_index": parsed_packet.get('payload', {}).get('chunk_index')
+                                }
+                            )
+                        # Hold loop (small steps) to allow client to drain
+                        total_held_ms = 0
+                        while total_held_ms < PACING_MAX_HOLD_MS:
+                            await asyncio.sleep(PACING_HOLD_STEP_MS / 1000.0)
+                            total_held_ms += PACING_HOLD_STEP_MS
+                            dest_backlogs = [client_backlog_map.get(d, {}).get('backlog_ms', 0) for d in dests] if dests else [0]
+                            max_backlog = max(dest_backlogs) if dest_backlogs else 0
+                            if max_backlog <= TARGET_CLIENT_BUFFER_MS:
+                                break
+
+                        # If still overloaded after holds, drop non-final frames
+                        is_final = False
+                        if parsed_packet:
+                            is_final = bool(parsed_packet.get('payload', {}).get('is_final', False))
+                        if max_backlog > TARGET_CLIENT_BUFFER_MS and not is_final:
+                            # Drop packet
+                            dropped_packets += 1
+                            drop_now = True
+                            if tracer and tracer.enabled and parsed_packet:
+                                tracer.log_event(
+                                    PipelineEvent.SERVER_PACING_DROPPED,
+                                    correlation_id=corr_id,
+                                    metadata={
+                                        "destination": dest_str,
+                                        "backlog_ms": max_backlog,
+                                        "held_ms": total_held_ms,
+                                        "packet_id": parsed_packet.get('id', ''),
+                                        "chunk_index": parsed_packet.get('payload', {}).get('chunk_index')
+                                    }
+                                )
+                        else:
+                            # Release and proceed to publish
+                            if tracer and tracer.enabled and parsed_packet:
+                                tracer.log_event(
+                                    PipelineEvent.SERVER_PACING_RELEASED,
+                                    correlation_id=corr_id,
+                                    metadata={
+                                        "destination": dest_str,
+                                        "held_ms": total_held_ms,
+                                        "packet_id": parsed_packet.get('id', ''),
+                                        "chunk_index": parsed_packet.get('payload', {}).get('chunk_index')
+                                    }
+                                )
+
+                if drop_now:
+                    publish_queue.task_done()
+                    continue
 
                 retries = 3
                 retry_delays = [0.1, 0.2, 0.4]
@@ -150,16 +254,6 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
                         break
 
                     try:
-                        parsed_packet = None
-                        corr_id = ""
-                        pkt_type = None
-                        try:
-                            parsed_packet = json.loads(packet_data.decode('utf-8'))
-                            corr_id = parsed_packet.get("payload", {}).get("correlation_id", "")
-                            pkt_type = parsed_packet.get('type')
-                        except Exception:
-                            pass
-
                         if destination_identities:
                             await room.local_participant.publish_data(
                                 packet_data,
@@ -319,6 +413,14 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
                 # and direct WebRTC playback.
                 packet["payload"]["audio_data"] = base64.b64encode(event.audio_data).decode("utf-8")
                 packet["payload"]["mime_type"] = event.mime_type
+                # Include per-chunk metadata when available
+                if hasattr(event, 'is_final'):
+                    packet['payload']['is_final'] = bool(event.is_final)
+                if hasattr(event, 'chunk_index'):
+                    try:
+                        packet['payload']['chunk_index'] = int(event.chunk_index)
+                    except Exception:
+                        packet['payload']['chunk_index'] = 0
                 
                 global _audio_packets_sent_count
                 _audio_packets_sent_count += 1
@@ -434,6 +536,58 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
     def on_track_unsubscribed(track: rtc.Track, publication, participant):
         if track.kind == rtc.TrackKind.KIND_AUDIO:
             logger.info(f"Agent unsubscribed from audio track {track.sid}")
+
+    @room.on("data_received")
+    def on_data_received(data, participant, topic=None):
+        """Handle low-rate client telemetry packets published from the frontend."""
+        try:
+            raw = None
+            if isinstance(data, (bytes, bytearray)):
+                try:
+                    raw = data.decode("utf-8")
+                except Exception:
+                    raw = None
+            elif isinstance(data, str):
+                raw = data
+
+            parsed = None
+            if raw:
+                try:
+                    parsed = json.loads(raw)
+                except Exception:
+                    parsed = None
+
+            pkt_type = None
+            if parsed:
+                pkt_type = parsed.get("type")
+            # Some SDKs provide topic separately
+            if not pkt_type and topic and isinstance(topic, str):
+                if topic.lower() == "clienttelemetry":
+                    pkt_type = "ClientTelemetry"
+
+            if pkt_type == "ClientTelemetry" and parsed:
+                payload = parsed.get("payload", {}) or {}
+                client_stats = payload.get("client", {}) or {}
+                arrival_rate = payload.get("arrival_rate", 0)
+                backlog_ms = int(client_stats.get("backlog_ms", 0) or 0)
+                queue_depth = int(client_stats.get("queue_depth", 0) or 0)
+                drop_count = int(client_stats.get("play_chunk_dropped_count", 0) or 0)
+                client_backlog_map[participant.identity] = {
+                    "backlog_ms": backlog_ms,
+                    "queue_depth": queue_depth,
+                    "arrival_rate": arrival_rate,
+                    "drop_count": drop_count,
+                    "last_seen": time.time()
+                }
+                if tracer and tracer.enabled:
+                    tracer.log_event(PipelineEvent.CLIENT_TELEMETRY_RECEIVED, correlation_id="", metadata={
+                        "participant": participant.identity,
+                        "backlog_ms": backlog_ms,
+                        "queue_depth": queue_depth,
+                        "arrival_rate": arrival_rate
+                    })
+        except Exception as e:
+            logger.debug(f"Failed to parse client telemetry packet: {e}")
 
     try:
         await room.connect(config.LIVEKIT_URL, token)

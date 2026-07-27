@@ -181,6 +181,15 @@ def compute_correlation_metrics(events: Sequence[Dict[str, Any]]) -> Dict[str, A
     else:
         metrics["time_to_first_audio_backend_ms"] = None
 
+    # KPI-grade TTFA: MIC_FRAME_RECEIVED -> first AUDIO_PLAYBACK_STARTED (actual playback, not scheduled).
+    # This is the definitive Time To First Audio metric — measures when audio actually begins playing,
+    # not when it was received or scheduled. Uses epoch timestamps (cross-host safe).
+    first_playback_started = _first_event(evs, ["AUDIO_PLAYBACK_STARTED"])
+    if first_mic and first_playback_started:
+        metrics["time_to_first_audio_playback_ms"] = _delta_ms(first_mic, first_playback_started)
+    else:
+        metrics["time_to_first_audio_playback_ms"] = None
+
     # End-to-End: MIC_FRAME_RECEIVED -> last AUDIO_PLAYBACK_SCHEDULED (prefer last)
     end_marker = last_audio_playback_scheduled or last_react_render_completed
     if first_mic and end_marker:
@@ -341,6 +350,83 @@ def compute_session_metrics(trace: Dict[str, Any]) -> Dict[str, Any]:
         stats["total_correlations"] = total_correlations
         stats["coverage_pct"] = float((stats.get("count", 0) / total_correlations * 100.0) if total_correlations else 0.0)
 
+    # ─────────────────────────────────────────────────────────────────────────────
+    # SESSION-LEVEL STREAMING CONTINUITY METRICS
+    # Computed across ALL events in the session (not per-correlation) to capture
+    # true inter-chunk gaps including gaps that span correlation boundaries.
+    #
+    # Formula:
+    #   inter_chunk_gap_ms[i] = AUDIO_PLAYBACK_STARTED[i].epoch_ms
+    #                           - AUDIO_PLAYBACK_STARTED[i-1].epoch_ms
+    #                           - chunk_duration_ms[i-1]
+    #
+    # Where chunk_duration_ms is derived from AUDIO_PLAYBACK_SCHEDULED metadata
+    # (chunk_duration_sec), falling back to inter-start interval if missing.
+    #
+    # A "restart" is any gap > 500ms (half-second silence = audible interruption).
+    # A "starvation" is a PLAYBACK_DROP_DECISION event (client queue was empty
+    # when next chunk arrived or backlog exceeded threshold).
+    # ─────────────────────────────────────────────────────────────────────────────
+    playback_started_events = sorted(
+        [ev for ev in sorted_events if ev.get("event") == "AUDIO_PLAYBACK_STARTED"],
+        key=lambda ev: (ev.get("timestamp_epoch_ms") or 0, ev.get("timestamp_monotonic_ns") or 0)
+    )
+    # Build a lookup: packet_id -> chunk_duration_sec from AUDIO_PLAYBACK_SCHEDULED events
+    sched_duration_map: Dict[str, float] = {}
+    for ev in sorted_events:
+        if ev.get("event") == "AUDIO_PLAYBACK_SCHEDULED":
+            md = ev.get("metadata") or {}
+            pid = str(md.get("packet_id") or "")
+            dur = md.get("chunk_duration_sec")
+            if pid and dur is not None:
+                try:
+                    sched_duration_map[pid] = float(dur)
+                except Exception:
+                    pass
+
+    inter_chunk_gaps_ms: List[float] = []
+    RESTART_THRESHOLD_MS = 500.0  # gap > 500ms = audible restart/interruption
+    restart_count = 0
+    starvation_count = sum(1 for ev in sorted_events if ev.get("event") == "PLAYBACK_DROP_DECISION")
+
+    for i in range(1, len(playback_started_events)):
+        prev_ev = playback_started_events[i - 1]
+        curr_ev = playback_started_events[i]
+        prev_epoch = prev_ev.get("timestamp_epoch_ms")
+        curr_epoch = curr_ev.get("timestamp_epoch_ms")
+        if prev_epoch is None or curr_epoch is None:
+            continue
+
+        # Determine duration of the previous chunk
+        prev_md = prev_ev.get("metadata") or {}
+        prev_pid = str(prev_md.get("packet_id") or "")
+        prev_duration_sec = sched_duration_map.get(prev_pid)
+        if prev_duration_sec is None:
+            # Fallback: estimated from scheduled_time_sec metadata field
+            prev_duration_sec = 0.0
+
+        prev_duration_ms = prev_duration_sec * 1000.0
+        gap_ms = float(curr_epoch) - float(prev_epoch) - prev_duration_ms
+
+        # Only count positive gaps (negative gaps = overlapping chunks, not silence)
+        if gap_ms > 0:
+            inter_chunk_gaps_ms.append(gap_ms)
+            if gap_ms > RESTART_THRESHOLD_MS:
+                restart_count += 1
+
+    # Streaming continuity summary
+    streaming_continuity: Dict[str, Any] = {
+        "total_playback_chunks": len(playback_started_events),
+        "inter_chunk_gap_count": len(inter_chunk_gaps_ms),
+        "average_gap_ms": round(float(statistics.mean(inter_chunk_gaps_ms)), 2) if inter_chunk_gaps_ms else None,
+        "maximum_gap_ms": round(float(max(inter_chunk_gaps_ms)), 2) if inter_chunk_gaps_ms else None,
+        "median_gap_ms": round(float(statistics.median(inter_chunk_gaps_ms)), 2) if inter_chunk_gaps_ms else None,
+        "p95_gap_ms": round(float(_percentile(sorted(inter_chunk_gaps_ms), 95)), 2) if inter_chunk_gaps_ms else None,
+        "restart_count": restart_count,
+        "restart_threshold_ms": RESTART_THRESHOLD_MS,
+        "starvation_count": starvation_count,
+    }
+
     session_metrics = {
         "session_id": trace.get("session", {}).get("session_id"),
         "generated_at_epoch_ms": int(time.time() * 1000),
@@ -351,6 +437,7 @@ def compute_session_metrics(trace: Dict[str, Any]) -> Dict[str, Any]:
         "incomplete_correlations": incomplete_correlations,
         "per_correlation": per_corr_results,
         "metrics_summary": summary_stats,
+        "streaming_continuity": streaming_continuity,
     }
 
     try:
@@ -407,7 +494,7 @@ def main() -> int:
 
     out_path = Path(args.out) if args.out else trace_path.parent / "metrics.json"
     export_metrics(metrics, out_path)
-    print(f"Metrics written → {out_path}")
+    print(f"Metrics written -> {out_path}")
     return 0
 
 
