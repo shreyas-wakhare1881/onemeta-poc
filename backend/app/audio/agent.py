@@ -121,12 +121,15 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
     client_backlog_map = {}
 
     # Server pacing tunables (milliseconds). Tunable via env vars.
-    # Aligned with client-side MAX_CLIENT_BUFFER_MS (80ms) to ensure server pacing
-    # and client drop thresholds are consistent — preventing packets from being held
-    # server-side longer than the client can absorb.
-    TARGET_CLIENT_BUFFER_MS = int(os.getenv("SERVER_TARGET_CLIENT_BUFFER_MS", "80"))
-    PACING_MAX_HOLD_MS = int(os.getenv("SERVER_PACING_MAX_HOLD_MS", "50"))
-    PACING_HOLD_STEP_MS = int(os.getenv("SERVER_PACING_HOLD_STEP_MS", "10"))
+    # TARGET_CLIENT_BUFFER_MS: Only apply pacing when client buffer exceeds this.
+    # Set to 150ms to give the client more headroom before server drops audio.
+    # The client MAX_CLIENT_BUFFER_MS (80ms) is the client's own drop threshold;
+    # the server threshold should be higher to avoid double-dropping.
+    TARGET_CLIENT_BUFFER_MS = int(os.getenv("SERVER_TARGET_CLIENT_BUFFER_MS", "150"))
+    # PACING_MAX_HOLD_MS: If backlog persists, hold for at most this long before dropping.
+    # Reduced from 50ms to 15ms — holding audio longer than its chunk duration hurts streaming.
+    PACING_MAX_HOLD_MS = int(os.getenv("SERVER_PACING_MAX_HOLD_MS", "15"))
+    PACING_HOLD_STEP_MS = int(os.getenv("SERVER_PACING_HOLD_STEP_MS", "5"))
 
     published_packets = 0
     retried_packets = 0
@@ -368,8 +371,12 @@ async def _run_agent(room_name: str, loopback: bool = False, source_participant_
         StreamingInputTranscriptionCompletedEvent,
     )
 
-    # Register an event listener to broadcast streaming translation events over LiveKit data channel
-    def log_ai_event(event):
+    # Register an event listener to broadcast streaming translation events over LiveKit data channel.
+    # IMPORTANT: This is declared as async so the streaming event dispatcher (streaming.py)
+    # will await it cleanly via the iscoroutinefunction branch, rather than calling it
+    # synchronously. For audio events, the base64 encoding runs inline here but the
+    # whole function returns quickly — no heavy blocking on the event loop.
+    async def log_ai_event(event):
         nonlocal queue_evictions
         c_id = getattr(event, "session_id", getattr(event, "correlation_id", "stream"))
         seq = getattr(event, "event_seq", 0)

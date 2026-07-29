@@ -264,9 +264,10 @@ export default function Home() {
         }
 
         if (tracer.isEnabled()) {
-          requestAnimationFrame(() => {
-            tracer.logEvent(PipelineEvent.REACT_RENDER_COMPLETED, correlationId, { text_delta: textDelta });
-          });
+            // Emit a canonical target-render event after the next animation frame
+            requestAnimationFrame(() => {
+              tracer.logEvent(PipelineEvent.TARGET_TRANSCRIPT_RENDERED, correlationId, { text_delta: textDelta });
+            });
         }
         
         addLog(`Streaming Spanish Transcript: "${textDelta}"`);
@@ -302,6 +303,7 @@ export default function Home() {
       else if (event.type === 'StreamingInputTranscriptionEvent') {
         const textDelta = event.payload.text_delta || '';
         const cumulativeText = event.payload.cumulative_text || '';
+        const correlationId = event.payload.correlation_id || '';
         
         setUseGeminiAsr((prev) => {
           if (!prev) {
@@ -320,6 +322,12 @@ export default function Home() {
             const next = (prev + ' ' + textDelta).trim();
             console.log(`[ENGLISH UPDATE] Source: Gemini (Delta) | Delta: "${textDelta}" | New Value: "${next}"`);
             return next;
+          });
+        }
+        // Emit a canonical source-render event after DOM update / next frame
+        if (tracer.isEnabled()) {
+          requestAnimationFrame(() => {
+            tracer.logEvent(PipelineEvent.SOURCE_TRANSCRIPT_RENDERED, correlationId, { text_delta: textDelta });
           });
         }
         addLog(`Streaming English Transcript (Gemini): "${textDelta}"`);

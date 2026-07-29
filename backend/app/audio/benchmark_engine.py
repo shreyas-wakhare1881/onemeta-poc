@@ -1,838 +1,568 @@
-"""
-Benchmark Engine (Phase 4)
+"""Benchmark Engine (Objective engineering dashboard)
 
-Consumes metrics.json and generates session-level performance benchmark (benchmark.json).
+This module reads the authoritative `metrics.json` and the `trace_validation.json`
+produced by the existing pipeline and emits a deterministic, objective
+`benchmark.json` that is a machine-friendly engineering dashboard.
+
+Constraints honored:
+- Uses only values already computed and present in `metrics.json` and
+  `trace_validation.json`.
+- No subjective grades or invented statistics.
+- No changes to other pipeline components.
 """
+
 from __future__ import annotations
 
 import json
 import logging
-import math
-import statistics
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+BENCHMARK_ENGINE_VERSION = "6.1.0"
+BENCHMARK_SCHEMA_VERSION = 1
+
 logger = logging.getLogger("onemeta.benchmark_engine")
 
-BENCHMARK_VERSION = "2.0.0"
 
-# Streaming score thresholds
-_STREAMING_SCORE_LABELS = [
-    (95, "Excellent — Gemini Live quality"),
-    (80, "Good"),
-    (60, "Noticeable pauses"),
-    (0, "Poor streaming"),
-]
+def _get_stat(summary: Dict[str, Any], key: str) -> Dict[str, Optional[float]]:
+    """Extract a normalized stat block from metrics_summary for `key`.
 
-
-def _compute_stats(values: List[float], percentiles: List[int] = []) -> Dict[str, Optional[float]]:
-    """Helper to compute min, max, average, median, and arbitrary percentiles of a float list.
-    Handles empty lists gracefully by returning None for all statistics.
+    Returns an object with the fields the engineering dashboard expects.
+    If a particular value isn't present in the source summary, it is left
+    as `None`.
     """
-    if not values:
+    if not summary or key not in summary:
         return {
             "min": None,
             "max": None,
             "average": None,
             "median": None,
-            **{f"p{p}": None for p in percentiles}
+            "p90": None,
+            "p95": None,
+            "p99": None,
+            "sample_count": None,
+            "coverage_pct": None,
         }
 
-    sorted_vals = sorted(values)
-    n = len(sorted_vals)
-
-    def _percentile(p: float) -> float:
-        if n == 0:
-            return 0.0
-        rank = (p / 100.0) * (n - 1)
-        lo = int(math.floor(rank))
-        hi = int(math.ceil(rank))
-        if lo == hi:
-            return float(sorted_vals[lo])
-        weight = rank - lo
-        return float(sorted_vals[lo] * (1.0 - weight) + sorted_vals[hi] * weight)
-
-    res = {
-        "min": float(sorted_vals[0]),
-        "max": float(sorted_vals[-1]),
-        "average": float(statistics.mean(sorted_vals)),
-        "median": float(statistics.median(sorted_vals))
-    }
-
-    for p in percentiles:
-        res[f"p{p}"] = float(_percentile(p))
-
-    # Round calculations for consistency and representation
-    for k, v in res.items():
-        if v is not None:
-            res[k] = round(v, 2)
-
-    return res
-
-
-def _calculate_performance_score(
-    success_rate: float,
-    e2e_avg: Optional[float],
-    gemini_avg: Optional[float],
-    playback_avg: Optional[float],
-    network_avg: Optional[float]
-) -> Dict[str, Any]:
-    """Deterministic score calculation (0 to 100) and letter grading.
-    Gracefully scales the weights based on available metrics.
-    """
-    total_weight = 0.0
-    earned_points = 0.0
-
-    # 1. Success Rate (weight 30)
-    total_weight += 30.0
-    earned_points += (success_rate / 100.0) * 30.0
-
-    # 2. End-to-End Latency (weight 30)
-    # Target SLA: <= 600ms is perfect (1.0), >= 3000ms is poor (0.0)
-    if e2e_avg is not None:
-        total_weight += 30.0
-        ratio = max(0.0, min(1.0, (3000.0 - e2e_avg) / (3000.0 - 600.0)))
-        earned_points += ratio * 30.0
-
-    # 3. Gemini Processing (weight 20)
-    # Target SLA: <= 150ms is perfect (1.0), >= 800ms is poor (0.0)
-    if gemini_avg is not None:
-        total_weight += 20.0
-        ratio = max(0.0, min(1.0, (800.0 - gemini_avg) / (800.0 - 150.0)))
-        earned_points += ratio * 20.0
-
-    # 4. Playback Delay (weight 10)
-    # Target SLA: <= 100ms is perfect (1.0), >= 500ms is poor (0.0)
-    if playback_avg is not None:
-        total_weight += 10.0
-        ratio = max(0.0, min(1.0, (500.0 - playback_avg) / (500.0 - 100.0)))
-        earned_points += ratio * 10.0
-
-    # 5. Network Latency (weight 10)
-    # Target SLA: <= 20ms is perfect (1.0), >= 200ms is poor (0.0)
-    if network_avg is not None:
-        total_weight += 10.0
-        ratio = max(0.0, min(1.0, (200.0 - network_avg) / (200.0 - 20.0)))
-        earned_points += ratio * 10.0
-
-    if total_weight > 0:
-        score = int(round((earned_points / total_weight) * 100.0))
-    else:
-        score = 100
-
-    if score >= 90:
-        overall = "A"
-    elif score >= 80:
-        overall = "B"
-    elif score >= 70:
-        overall = "C"
-    elif score >= 60:
-        overall = "D"
-    else:
-        overall = "F"
+    s = summary.get(key, {})
+    def _get(k: str):
+        v = s.get(k)
+        return float(v) if v is not None else None
 
     return {
-        "overall": overall,
-        "score": score
+        "min": _get("min_ms"),
+        "max": _get("max_ms"),
+        "average": _get("avg_ms"),
+        "median": _get("median_ms"),
+        "p90": _get("p90_ms"),
+        "p95": _get("p95_ms"),
+        "p99": _get("p99_ms"),
+        "sample_count": int(s.get("count")) if s.get("count") is not None else None,
+        "coverage_pct": float(s.get("coverage_pct")) if s.get("coverage_pct") is not None else None,
     }
 
 
-def _compute_top_bottlenecks(
-    playback_avg: Optional[float],
-    gemini_avg: Optional[float],
-    network_avg: Optional[float],
-    frontend_avg: Optional[float],
-    pcm_avg: Optional[float]
-) -> List[Dict[str, Any]]:
-    """Rank components by their average latency in descending order."""
-    items = []
-    if playback_avg is not None:
-        items.append(("Playback", playback_avg))
-    if gemini_avg is not None:
-        items.append(("Gemini", gemini_avg))
-    if network_avg is not None:
-        items.append(("Network", network_avg))
-    if frontend_avg is not None:
-        items.append(("Frontend Rendering", frontend_avg))
-    if pcm_avg is not None:
-        items.append(("PCM Decode", pcm_avg))
-
-    items.sort(key=lambda x: x[1], reverse=True)
-
-    return [
-        {
-            "rank": idx,
-            "component": name,
-            "average_ms": round(avg, 2)
-        }
-        for idx, (name, avg) in enumerate(items, 1)
-    ]
+def _choose_key(summary: Dict[str, Any], candidates: List[str]) -> Optional[str]:
+    for k in candidates:
+        if k in summary:
+            return k
+    return None
 
 
-def _compute_opportunities(
-    playback_avg: Optional[float],
-    gemini_avg: Optional[float],
-    network_avg: Optional[float],
-    frontend_avg: Optional[float],
-    pcm_avg: Optional[float]
-) -> List[Dict[str, Any]]:
-    """Identify optimization opportunities based on SLA targets and potential gains."""
-    targets = {
-        "Playback": (100.0, playback_avg),
-        "Gemini": (150.0, gemini_avg),
-        "Network": (20.0, network_avg),
-        "Frontend Rendering": (10.0, frontend_avg),
-        "PCM Decode": (0.2, pcm_avg)
-    }
-
-    opps = []
-    for comp, (target, avg) in targets.items():
-        if avg is not None and avg > target:
-            gain = avg - target
-            if gain >= 100.0:
-                priority = "HIGH"
-            elif gain >= 30.0:
-                priority = "MEDIUM"
-            else:
-                priority = "LOW"
-
-            opps.append({
-                "component": comp,
-                "priority": priority,
-                "expected_gain_ms": round(gain, 2)
-            })
-
-    # Sort opportunities by expected gain in descending order
-    opps.sort(key=lambda x: x["expected_gain_ms"], reverse=True)
-    return opps
+def _iso_from_epoch_ms(epoch_ms: Optional[int]) -> Optional[str]:
+    if epoch_ms is None:
+        return None
+    try:
+        return datetime.fromtimestamp(epoch_ms / 1000.0, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    except Exception:
+        return None
 
 
-def _generate_recommendations(
-    success_rate: float,
-    playback_avg: Optional[float],
-    gemini_avg: Optional[float],
-    network_avg: Optional[float],
-    frontend_avg: Optional[float],
-    pcm_avg: Optional[float]
-) -> List[str]:
-    """Generate concise data-driven recommendations."""
-    recs = []
+def generate_benchmark(session_dir: Path) -> Dict[str, Any]:
+    """Read `metrics.json` and `trace_validation.json` and write `benchmark.json`.
 
-    if playback_avg is not None:
-        if playback_avg > 200.0:
-            recs.append(f"Playback scheduling delay is high (average {round(playback_avg, 1)} ms). Optimize client-side queue size or scheduling intervals.")
-        else:
-            recs.append(f"Playback scheduling latency is healthy (average {round(playback_avg, 1)} ms).")
-
-    if gemini_avg is not None:
-        if gemini_avg > 250.0:
-            recs.append(f"Gemini latency is elevated (average {round(gemini_avg, 1)} ms). Check region hosting or prompt length.")
-        else:
-            recs.append(f"Gemini latency is within expected limits (average {round(gemini_avg, 1)} ms).")
-
-    if network_avg is not None:
-        if network_avg > 50.0:
-            recs.append(f"Network transmission latency is high (average {round(network_avg, 1)} ms). Consider checking network connection or compression.")
-        else:
-            recs.append(f"Network latency is healthy (average {round(network_avg, 1)} ms).")
-
-    if pcm_avg is not None:
-        if pcm_avg > 1.0:
-            recs.append(f"PCM decoding is slow (average {round(pcm_avg, 2)} ms). Consider hardware acceleration or optimizing buffer size.")
-        else:
-            recs.append(f"PCM decoding does not require optimization (average {round(pcm_avg, 2)} ms is very low).")
-
-    if frontend_avg is not None:
-        if frontend_avg > 30.0:
-            recs.append(f"Frontend rendering delay is high (average {round(frontend_avg, 1)} ms). Profile React component rendering.")
-        else:
-            recs.append(f"Frontend rendering latency is healthy (average {round(frontend_avg, 1)} ms).")
-
-    if success_rate < 90.0:
-        recs.append(f"Session success rate is low ({round(success_rate, 1)}%). Check for connection drops or crash logs.")
-    else:
-        recs.append(f"Session health is excellent with a success rate of {round(success_rate, 1)}%.")
-
-    return recs
-
-
-def _compute_streaming_score(
-    average_gap_ms: Optional[float],
-    maximum_gap_ms: Optional[float],
-    restart_count: int,
-    starvation_count: int,
-    total_chunks: int
-) -> Dict[str, Any]:
-    """Compute a 0–100 Continuous Audio Streaming Score.
-
-    Formula (deterministic, reproducible):
-      Base score = 100
-      Penalty for average_gap_ms:
-        - gap < 30ms   : no penalty
-        - gap 30-100ms : linear 0-10 pts
-        - gap 100-300ms: linear 10-30 pts
-        - gap > 300ms  : 30 pts
-      Penalty for maximum_gap_ms:
-        - max_gap > 500ms  (restart threshold): -10 pts
-        - max_gap > 1000ms : additional -10 pts
-        - max_gap > 2000ms : additional -5 pts
-      Penalty for restart_count:
-        - 1 per restart up to -20 pts max (each restart = -4 pts)
-      Penalty for starvation_count:
-        - 1 per starvation up to -10 pts max (each = -2 pts)
-    Total clamped to [0, 100].
+    This function is the single canonical benchmark generator used by the
+    pipeline.
     """
-    if total_chunks == 0:
-        return {"streaming_score": 0, "streaming_grade": "N/A", "streaming_label": "No data"}
-
-    score = 100.0
-
-    # Average gap penalty
-    if average_gap_ms is not None:
-        if average_gap_ms >= 300.0:
-            score -= 30.0
-        elif average_gap_ms >= 100.0:
-            # Linear interpolation: 10 pts at 100ms, 30 pts at 300ms
-            score -= 10.0 + (average_gap_ms - 100.0) / 200.0 * 20.0
-        elif average_gap_ms >= 30.0:
-            # Linear interpolation: 0 pts at 30ms, 10 pts at 100ms
-            score -= (average_gap_ms - 30.0) / 70.0 * 10.0
-
-    # Maximum gap penalty
-    if maximum_gap_ms is not None:
-        if maximum_gap_ms > 2000.0:
-            score -= 25.0
-        elif maximum_gap_ms > 1000.0:
-            score -= 20.0
-        elif maximum_gap_ms > 500.0:
-            score -= 10.0
-
-    # Restart penalty (each restart = -4 pts, max -20)
-    score -= min(restart_count * 4.0, 20.0)
-
-    # Starvation penalty (each starvation = -2 pts, max -10)
-    score -= min(starvation_count * 2.0, 10.0)
-
-    score = max(0.0, min(100.0, score))
-    score_int = int(round(score))
-
-    # Determine grade label
-    grade = "Poor"
-    label = "Poor streaming"
-    for threshold, lbl in _STREAMING_SCORE_LABELS:
-        if score_int >= threshold:
-            if score_int >= 98:
-                grade = "A+"
-            elif score_int >= 90:
-                grade = "A"
-            elif score_int >= 80:
-                grade = "B"
-            elif score_int >= 60:
-                grade = "C"
-            else:
-                grade = "D"
-            label = lbl
-            break
-
-    return {
-        "streaming_score": score_int,
-        "streaming_grade": grade,
-        "streaming_label": label
-    }
-
-
-def _compute_executive_summary(
-    per_correlation: Dict[str, Any],
-    playback_stats: Dict[str, Optional[float]],
-    text_first_response_stats: Dict[str, Optional[float]],
-    audio_first_response_stats: Dict[str, Optional[float]],
-    streaming_continuity: Optional[Dict[str, Any]],
-    overall_grade: str,
-    overall_score: int
-) -> Dict[str, Any]:
-    """Build the executive_summary block for benchmark.json.
-
-    KPI derivation:
-      TTFT  = time_to_first_text_render_ms (preferred) or time_to_first_text_arrival_ms
-              across all correlations that have MIC_FRAME_RECEIVED data.
-      TTFA  = time_to_first_audio_playback_ms (MIC -> AUDIO_PLAYBACK_STARTED)
-              across all correlations that have both events.
-      Streaming score = computed by _compute_streaming_score from streaming_continuity.
-      Playback scheduling = playback_stats (existing, repackaged with P95).
-      Translation accuracy = placeholder for future BLEU/COMET/BERTScore integration.
-    """
-    # Collect TTFT values across correlations
-    ttft_vals: List[float] = []
-    # Collect TTFA (playback-grade) values across correlations
-    ttfa_vals: List[float] = []
-
-    for c_data in per_correlation.values():
-        m = c_data.get("metrics") or {}
-
-        # TTFT: prefer render-visible (MIC -> REACT_RENDER_COMPLETED)
-        ttft = m.get("time_to_first_text_render_ms")
-        if ttft is None:
-            ttft = m.get("time_to_first_text_arrival_ms")
-        if ttft is not None and ttft > 0:
-            ttft_vals.append(ttft)
-
-        # TTFA: KPI-grade (MIC -> AUDIO_PLAYBACK_STARTED)
-        ttfa = m.get("time_to_first_audio_playback_ms")
-        if ttfa is None:
-            # Fallback: frontend receive (coarser)
-            ttfa = m.get("time_to_first_audio_frontend_ms")
-        if ttfa is not None and ttfa > 0:
-            ttfa_vals.append(ttfa)
-
-    ttft_stats = _compute_stats(ttft_vals, [95])
-    ttfa_stats = _compute_stats(ttfa_vals, [95])
-    playback_p95_stats = _compute_stats(
-        [v for v in [
-            playback_stats.get("min"),
-            playback_stats.get("max"),
-            playback_stats.get("average"),
-            playback_stats.get("median")
-        ] if v is not None],
-        [95]
-    ) if playback_stats.get("average") is not None else {}
-
-    # Streaming continuity
-    sc = streaming_continuity or {}
-    total_chunks = sc.get("total_playback_chunks", 0)
-    avg_gap = sc.get("average_gap_ms")
-    max_gap = sc.get("maximum_gap_ms")
-    restart_count = sc.get("restart_count", 0)
-    starvation_count = sc.get("starvation_count", 0)
-
-    streaming_score_data = _compute_streaming_score(
-        average_gap_ms=avg_gap,
-        maximum_gap_ms=max_gap,
-        restart_count=restart_count,
-        starvation_count=starvation_count,
-        total_chunks=total_chunks
-    )
-
-    # Executive overall grade (uses existing performance score)
-    exec_grade = overall_grade
-    if streaming_score_data["streaming_score"] >= 95 and overall_score >= 90:
-        exec_grade = "A+"
-
-    return {
-        "ttft": {
-            "description": "Time from User Speech Start to first translated text available",
-            "formula": "MIC_FRAME_RECEIVED -> first TEXT_PACKET_RECEIVED or REACT_RENDER_COMPLETED",
-            "average_ms": ttft_stats.get("average"),
-            "median_ms": ttft_stats.get("median"),
-            "min_ms": ttft_stats.get("min"),
-            "max_ms": ttft_stats.get("max"),
-            "p95_ms": ttft_stats.get("p95"),
-            "sample_count": len(ttft_vals)
-        },
-        "ttfa": {
-            "description": "Time from User Speech Start to first translated audio actually playing",
-            "formula": "MIC_FRAME_RECEIVED -> first AUDIO_PLAYBACK_STARTED (actual playback, not scheduled)",
-            "average_ms": ttfa_stats.get("average"),
-            "median_ms": ttfa_stats.get("median"),
-            "min_ms": ttfa_stats.get("min"),
-            "max_ms": ttfa_stats.get("max"),
-            "p95_ms": ttfa_stats.get("p95"),
-            "sample_count": len(ttfa_vals)
-        },
-        "continuous_audio_streaming": {
-            "description": "Did translated audio continuously stream while the user was still speaking?",
-            "formula": "gap_ms[i] = AUDIO_PLAYBACK_STARTED[i].epoch_ms - AUDIO_PLAYBACK_STARTED[i-1].epoch_ms - chunk_duration_ms[i-1]. restart = gap > 500ms.",
-            "streaming_score": streaming_score_data["streaming_score"],
-            "streaming_grade": streaming_score_data["streaming_grade"],
-            "streaming_label": streaming_score_data["streaming_label"],
-            "average_gap_ms": avg_gap,
-            "maximum_gap_ms": max_gap,
-            "median_gap_ms": sc.get("median_gap_ms"),
-            "p95_gap_ms": sc.get("p95_gap_ms"),
-            "total_playback_chunks": total_chunks,
-            "playback_restart_count": restart_count,
-            "playback_starvation_count": starvation_count,
-            "restart_threshold_ms": sc.get("restart_threshold_ms", 500.0)
-        },
-        "playback_scheduling": {
-            "description": "Time from audio packet received at client to actual playback scheduling",
-            "formula": "AUDIO_PACKET_RECEIVED -> AUDIO_PLAYBACK_SCHEDULED, per packet",
-            "average_ms": playback_stats.get("average"),
-            "median_ms": playback_stats.get("median"),
-            "p95_ms": playback_stats.get("p95"),
-            "max_ms": playback_stats.get("max")
-        },
-        "translation_accuracy": {
-            "description": "Pluggable translation quality metric. Supports BLEU, COMET, SacreBLEU, BERTScore, Gemini Judge.",
-            "status": "N/A",
-            "metric": "Future Integration",
-            "supported_evaluators": ["BLEU", "COMET", "SacreBLEU", "BERTScore", "Gemini Judge", "Human Evaluation"]
-        },
-        "overall_grade": exec_grade,
-        "overall_score": overall_score
-    }
-
-
-def _print_executive_summary(summary: Dict[str, Any], session_id: Optional[str]) -> None:
-    """Log the formatted ASCII Executive Benchmark Summary after every session."""
-    ttft = summary.get("ttft", {})
-    ttfa = summary.get("ttfa", {})
-    cas = summary.get("continuous_audio_streaming", {})
-    ps = summary.get("playback_scheduling", {})
-    ta = summary.get("translation_accuracy", {})
-    grade = summary.get("overall_grade", "N/A")
-    score = summary.get("overall_score", 0)
-
-    def _fmt(v: Optional[float], unit: str = "ms") -> str:
-        return f"{v:.1f} {unit}" if v is not None else "N/A"
-
-    lines = [
-        "=" * 58,
-        f"  Speech-to-Speech Executive Benchmark Summary",
-        f"  Session: {session_id or 'unknown'}",
-        "=" * 58,
-        "",
-        "  KPI 1 — TTFT (Time To First Text)",
-        f"    Average  : {_fmt(ttft.get('average_ms'))}",
-        f"    Median   : {_fmt(ttft.get('median_ms'))}",
-        f"    P95      : {_fmt(ttft.get('p95_ms'))}",
-        f"    Min/Max  : {_fmt(ttft.get('min_ms'))} / {_fmt(ttft.get('max_ms'))}",
-        f"    Samples  : {ttft.get('sample_count', 0)}",
-        "",
-        "  KPI 2 — TTFA (Time To First Audio Playback)",
-        f"    Average  : {_fmt(ttfa.get('average_ms'))}",
-        f"    Median   : {_fmt(ttfa.get('median_ms'))}",
-        f"    P95      : {_fmt(ttfa.get('p95_ms'))}",
-        f"    Min/Max  : {_fmt(ttfa.get('min_ms'))} / {_fmt(ttfa.get('max_ms'))}",
-        f"    Samples  : {ttfa.get('sample_count', 0)}",
-        "",
-        "  KPI 3 — Continuous Audio Streaming",
-        f"    Score    : {cas.get('streaming_score', 0)} / 100  [{cas.get('streaming_grade', 'N/A')}]",
-        f"    Label    : {cas.get('streaming_label', 'N/A')}",
-        f"    Avg Gap  : {_fmt(cas.get('average_gap_ms'))}",
-        f"    Max Gap  : {_fmt(cas.get('maximum_gap_ms'))}",
-        f"    Restarts : {cas.get('playback_restart_count', 0)}",
-        f"    Starvations: {cas.get('playback_starvation_count', 0)}",
-        f"    Chunks   : {cas.get('total_playback_chunks', 0)}",
-        "",
-        "  KPI 4 — Playback Scheduling Delay",
-        f"    Average  : {_fmt(ps.get('average_ms'))}",
-        f"    Median   : {_fmt(ps.get('median_ms'))}",
-        f"    P95      : {_fmt(ps.get('p95_ms'))}",
-        f"    Max      : {_fmt(ps.get('max_ms'))}",
-        "",
-        "  KPI 5 — Translation Accuracy",
-        f"    Status   : {ta.get('status', 'N/A')}",
-        f"    Metric   : {ta.get('metric', 'Future Integration')}",
-        "",
-        "  Overall Session Grade",
-        f"    Grade    : {grade}   (Score: {score}/100)",
-        "",
-        "=" * 58,
-    ]
-    for line in lines:
-        logger.info(f"[ExecutiveSummary] {line}")
-
-
-def generate_benchmark(session_dir: Path) -> None:
-    """Consumes metrics.json from session_dir and outputs benchmark.json.
-    Ensures safe operations and logs lifecycle events.
-    """
-    import time
-    start_time = time.perf_counter()
-    logger.info("[BenchmarkEngine] BENCHMARK_GENERATION_STARTED")
-
     metrics_path = session_dir / "metrics.json"
-    benchmark_path = session_dir / "benchmark.json"
+    validation_path = session_dir / "trace_validation.json"
+    out_path = session_dir / "benchmark.json"
 
     if not metrics_path.exists():
-        logger.warning(f"[BenchmarkEngine] metrics.json not found in {session_dir}. Skipping benchmark generation.")
-        elapsed_ms = (time.perf_counter() - start_time) * 1000.0
-        logger.info(f"[BenchmarkEngine] BENCHMARK_GENERATION_COMPLETED — generation_time_ms={elapsed_ms:.1f}")
-        return
+        logger.error("metrics.json not found: %s", metrics_path)
+        return {}
 
-    # Load metrics.json
-    try:
-        with open(metrics_path, "r", encoding="utf-8") as f:
-            metrics_json = json.load(f)
-        logger.info(f"[BenchmarkEngine] BENCHMARK_METRICS_LOADED — path={metrics_path}")
-    except Exception as e:
-        logger.error(f"[BenchmarkEngine] Failed to load metrics.json: {e}")
-        elapsed_ms = (time.perf_counter() - start_time) * 1000.0
-        logger.info(f"[BenchmarkEngine] BENCHMARK_GENERATION_COMPLETED — generation_time_ms={elapsed_ms:.1f}")
-        return
+    with metrics_path.open("r", encoding="utf-8") as f:
+        metrics = json.load(f)
 
-    logger.info("[BenchmarkEngine] BENCHMARK_CALCULATION_STARTED")
+    summary = metrics.get("metrics_summary", {})
+    continuity = metrics.get("streaming_continuity", {})
 
-    # Extract session variables
-    session_id = metrics_json.get("session_id")
-    generated_at_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    total_corr = int(metrics.get("total_correlations") or 0)
+    completed_corr = int(metrics.get("completed_correlations") or 0)
+    incomplete_corr = int(metrics.get("incomplete_correlations") or 0)
+    completion_pct = round((completed_corr / total_corr * 100.0), 2) if total_corr > 0 else None
 
-    # Extract correlation metadata
-    total_correlations = metrics_json.get("total_correlations", 0)
-    completed_correlations = metrics_json.get("completed_correlations", 0)
-    incomplete_correlations = metrics_json.get("incomplete_correlations", 0)
-    
-    success_rate_percent = 0.0
-    if total_correlations > 0:
-        success_rate_percent = round((completed_correlations / total_correlations) * 100.0, 2)
+    # Read validation file if present and surface values directly
+    val = {}
+    if validation_path.exists():
+        with validation_path.open("r", encoding="utf-8") as vf:
+            try:
+                val = json.load(vf)
+            except Exception:
+                val = {}
 
-    # Accumulate metrics across individual correlations
-    end_to_end_vals = []
-    gemini_vals = []
-    playback_vals = []
-    network_vals = []
-    pcm_decode_vals = []
-    text_render_vals = []
-    text_first_response_vals = []
-    audio_first_response_vals = []
-
-    required_metrics = [
-        "time_to_first_text_arrival_ms",
-        "time_to_first_text_render_ms",
-        "text_render_latency_ms",
-        "time_to_first_audio_frontend_ms",
-        "time_to_first_audio_backend_ms",
-        "end_to_end_ms",
-        "gemini_processing_ms",
-        "pcm_decode_ms",
-        "playback_scheduling_delay_ms",
-        "correlation_completion_ms",
-        "network_publish_to_receive_ms"
-    ]
-
-    per_correlation = metrics_json.get("per_correlation", {})
-    missing_fields_warning_logged = False
-
-    for c_id, c_data in per_correlation.items():
-        m = c_data.get("metrics") or {}
-        
-        # Check expected metrics fields exist in the dictionary (not necessarily non-None)
-        missing_keys = [k for k in required_metrics if k not in m]
-        if missing_keys and not missing_fields_warning_logged:
-            logger.warning(
-                f"[BenchmarkEngine] Missing expected metrics fields in correlation {c_id}: {missing_keys}"
-            )
-            missing_fields_warning_logged = True
-        
-        # End-to-End
-        e2e = m.get("end_to_end_ms")
-        if e2e is not None:
-            end_to_end_vals.append(e2e)
-            
-        # Gemini
-        gemini = m.get("gemini_processing_ms")
-        if gemini is not None:
-            gemini_vals.append(gemini)
-            
-        # Playback
-        playback = m.get("playback_scheduling_delay_ms")
-        if playback is not None:
-            playback_vals.append(playback)
-            
-        # Network
-        net = m.get("network_publish_to_receive_ms")
-        if net is not None:
-            network_vals.append(net)
-            
-        # PCM Decode
-        pcm = m.get("pcm_decode_ms")
-        if pcm is not None:
-            pcm_decode_vals.append(pcm)
-            
-        # Frontend Rendering (text_render_latency_ms)
-        f_render = m.get("text_render_latency_ms")
-        if f_render is not None:
-            text_render_vals.append(f_render)
-
-        # First Text Response
-        ft = m.get("time_to_first_text_render_ms")
-        if ft is None:
-            ft = m.get("time_to_first_text_arrival_ms")
-        if ft is not None:
-            text_first_response_vals.append(ft)
-
-        # First Audio Response
-        fa = m.get("time_to_first_audio_frontend_ms")
-        if fa is None:
-            fa = m.get("time_to_first_audio_backend_ms")
-        if fa is not None:
-            audio_first_response_vals.append(fa)
-
-    # Check if there is absolutely no valid correlation data or all are empty/None
-    all_empty = not (
-        end_to_end_vals or
-        gemini_vals or
-        playback_vals or
-        network_vals or
-        pcm_decode_vals or
-        text_render_vals or
-        text_first_response_vals or
-        audio_first_response_vals
-    )
-
-    # Compute Statistics
-    end_to_end_stats = _compute_stats(end_to_end_vals, [90, 95, 99])
-    gemini_stats = _compute_stats(gemini_vals, [95])
-    playback_stats = _compute_stats(playback_vals)
-    network_stats = _compute_stats(network_vals)
-    pcm_decode_stats = _compute_stats(pcm_decode_vals)
-    frontend_rendering_stats = _compute_stats(text_render_vals)
-    text_first_response_stats = _compute_stats(text_first_response_vals)
-    audio_first_response_stats = _compute_stats(audio_first_response_vals)
-
-    # Derived Insights
-    playback_avg = playback_stats.get("average")
-    gemini_avg = gemini_stats.get("average")
-    network_avg = network_stats.get("average")
-    frontend_rendering_avg = frontend_rendering_stats.get("average")
-    pcm_decode_avg = pcm_decode_stats.get("average")
-    e2e_avg = end_to_end_stats.get("average")
-
-    if all_empty:
-        perf_score = {
-            "overall": "N/A",
-            "score": 0
-        }
-        top_bottlenecks = []
-        opportunities = []
-        recommendations = ["No valid benchmark data available for this session."]
-    else:
-        perf_score = _calculate_performance_score(
-            success_rate_percent,
-            e2e_avg,
-            gemini_avg,
-            playback_avg,
-            network_avg
-        )
-
-        top_bottlenecks = _compute_top_bottlenecks(
-            playback_avg,
-            gemini_avg,
-            network_avg,
-            frontend_rendering_avg,
-            pcm_decode_avg
-        )
-
-        opportunities = _compute_opportunities(
-            playback_avg,
-            gemini_avg,
-            network_avg,
-            frontend_rendering_avg,
-            pcm_decode_avg
-        )
-
-        recommendations = _generate_recommendations(
-            success_rate_percent,
-            playback_avg,
-            gemini_avg,
-            network_avg,
-            frontend_rendering_avg,
-            pcm_decode_avg
-        )
-
-    logger.info("[BenchmarkEngine] BENCHMARK_CALCULATION_COMPLETED")
-
-    # Build final benchmark.json structure
-    benchmark_data = {
-        "session": {
-            "session_id": session_id,
-            "generated_at": generated_at_iso,
-            "benchmark_version": BENCHMARK_VERSION,
-            "metrics_version": str(metrics_json.get("metrics_schema_version", "1.0.0"))
+    # Measured benchmarks: canonical, rich statistics
+    measured = {
+        "session_health": {
+            "total_correlations": total_corr,
+            "completed_correlations": completed_corr,
+            "incomplete_correlations": incomplete_corr,
+            "success_rate_percent": completion_pct,
         },
-        "measured_benchmarks": {
-            "session_health": {
-                "total_correlations": total_correlations,
-                "completed_correlations": completed_correlations,
-                "incomplete_correlations": incomplete_correlations,
-                "success_rate_percent": success_rate_percent
-            },
-            "end_to_end_latency_ms": {
-                "min": end_to_end_stats.get("min"),
-                "max": end_to_end_stats.get("max"),
-                "average": end_to_end_stats.get("average"),
-                "median": end_to_end_stats.get("median"),
-                "p90": end_to_end_stats.get("p90"),
-                "p95": end_to_end_stats.get("p95"),
-                "p99": end_to_end_stats.get("p99")
-            },
-            "gemini_processing_ms": {
-                "min": gemini_stats.get("min"),
-                "max": gemini_stats.get("max"),
-                "average": gemini_stats.get("average"),
-                "median": gemini_stats.get("median"),
-                "p95": gemini_stats.get("p95")
-            },
-            "first_response": {
-                "text_latency_ms": {
-                    "average": text_first_response_stats.get("average"),
-                    "median": text_first_response_stats.get("median")
-                },
-                "audio_latency_ms": {
-                    "average": audio_first_response_stats.get("average"),
-                    "median": audio_first_response_stats.get("median")
-                }
-            },
-            "playback": {
-                "average_delay_ms": playback_stats.get("average"),
-                "median_delay_ms": playback_stats.get("median"),
-                "max_delay_ms": playback_stats.get("max")
-            },
-            "network": {
-                "average_ms": network_stats.get("average"),
-                "median_ms": network_stats.get("median"),
-                "max_ms": network_stats.get("max")
-            },
-            "pcm_decode": {
-                "average_ms": pcm_decode_stats.get("average"),
-                "max_ms": pcm_decode_stats.get("max")
-            },
-            "frontend_rendering": {
-                "average_ms": frontend_rendering_stats.get("average"),
-                "median_ms": frontend_rendering_stats.get("median"),
-                "max_ms": frontend_rendering_stats.get("max")
-            }
+        "end_to_end_latency_ms": _get_stat(summary, "end_to_end_ms"),
+        "gemini_processing_ms": _get_stat(summary, "gemini_processing_ms"),
+        "first_response": {
+            "text_latency_ms": _get_stat(summary, _choose_key(summary, ["ttft_ms", "time_to_first_text_render_ms", "time_to_first_text_arrival_ms"]) or "time_to_first_text_render_ms"),
+            "audio_latency_ms": _get_stat(summary, _choose_key(summary, ["ttfa_ms", "time_to_first_audio_playback_ms", "time_to_first_audio_frontend_ms"]) or "time_to_first_audio_playback_ms"),
         },
-        "derived_insights": {
-            "performance_score": perf_score,
-            "top_bottlenecks": top_bottlenecks,
-            "optimization_opportunities": opportunities,
-            "recommendations": recommendations
+        "playback": _get_stat(summary, _choose_key(summary, ["playback_scheduling_delay_ms", "first_audio_to_first_playback_ms"]) or "playback_scheduling_delay_ms"),
+        "network": _get_stat(summary, "network_publish_to_receive_ms"),
+        "pcm_decode": _get_stat(summary, "pcm_decode_ms"),
+        "frontend_rendering": _get_stat(summary, "text_render_latency_ms"),
+        "streaming": {
+            "average_gap_ms": float(continuity.get("average_gap_ms")) if continuity.get("average_gap_ms") is not None else None,
+            "median_gap_ms": float(continuity.get("median_gap_ms")) if continuity.get("median_gap_ms") is not None else None,
+            "p95_gap_ms": float(continuity.get("p95_gap_ms")) if continuity.get("p95_gap_ms") is not None else None,
+            "maximum_gap_ms": float(continuity.get("maximum_gap_ms")) if continuity.get("maximum_gap_ms") is not None else None,
+            "restart_count": int(continuity.get("restart_count")) if continuity.get("restart_count") is not None else None,
+            "starvation_count": int(continuity.get("starvation_count")) if continuity.get("starvation_count") is not None else None,
+            "continuous_audio_pct": float(continuity.get("continuous_audio_pct")) if continuity.get("continuous_audio_pct") is not None else None,
+            "total_playback_chunks": int(continuity.get("total_playback_chunks")) if continuity.get("total_playback_chunks") is not None else None,
+            "restart_threshold_ms": float(continuity.get("restart_threshold_ms")) if continuity.get("restart_threshold_ms") is not None else None,
+        },
+        "validation": {
+            "trace_valid": val.get("trace_valid"),
+            "trace_quality": val.get("trace_quality") or val.get("validation_quality"),
+            "ordering_errors": val.get("ordering_errors"),
+            "duplicate_events": val.get("duplicate_events"),
+            "missing_events": val.get("incomplete_correlations") or val.get("incomplete_correlations", 0),
+            "clock_issues_count": None,
         }
     }
 
-    # ──────────────────────────────────────────────────────────
-    # EXECUTIVE KPI SUMMARY
-    # Computed from:
-    #   - per_correlation metrics (TTFT, TTFA via time_to_first_audio_playback_ms)
-    #   - streaming_continuity block (gap analysis, restart/starvation counts)
-    #   - playback_stats (scheduling delay with P95)
-    #   - translation_accuracy = placeholder (future BLEU/COMET/Gemini Judge)
-    # ──────────────────────────────────────────────────────────
-    streaming_continuity = metrics_json.get("streaming_continuity") or {}
-    playback_stats_with_p95 = _compute_stats(playback_vals, [95])
+    # Count obvious clock-issue patterns in validator 'errors' array if present
+    clock_count = 0
+    for e in val.get("errors", []) or []:
+        se = str(e).lower()
+        if "monotonic timestamp decreased" in se or "monotonic jitter" in se:
+            clock_count += 1
+    if clock_count:
+        measured["validation"]["clock_issues_count"] = clock_count
 
-    executive_summary = _compute_executive_summary(
-        per_correlation=per_correlation,
-        playback_stats=playback_stats_with_p95,
-        text_first_response_stats=text_first_response_stats,
-        audio_first_response_stats=audio_first_response_stats,
-        streaming_continuity=streaming_continuity,
-        overall_grade=perf_score.get("overall", "N/A"),
-        overall_score=perf_score.get("score", 0)
-    )
-    benchmark_data["executive_summary"] = executive_summary
+    # Bottlenecks and component-level stats
+    components_to_rank = [
+        ("Gemini", "gemini_processing_ms"),
+        ("Network", "network_publish_to_receive_ms"),
+        ("Playback", "playback_scheduling_delay_ms"),
+        ("Frontend Rendering", "text_render_latency_ms"),
+        ("PCM Decode", "pcm_decode_ms"),
+    ]
 
-    # Log the ASCII executive dashboard
-    _print_executive_summary(executive_summary, session_id)
+    component_stats: Dict[str, Dict[str, Optional[float]]] = {}
+    for name, key in components_to_rank:
+        stat = _get_stat(summary, key)
+        component_stats[name] = stat
+
+    ranked = []
+    for name in component_stats:
+        avg = component_stats[name].get("average")
+        ranked.append({
+            "component": name,
+            "average_ms": avg,
+            "p95_ms": component_stats[name].get("p95"),
+            "sample_count": component_stats[name].get("sample_count"),
+        })
+
+    ranked_sorted = [r for r in sorted(ranked, key=lambda x: (-(x["average_ms"] or -1e12)))]
+    top_bottlenecks = []
+    for i, r in enumerate(ranked_sorted, start=1):
+        if r["average_ms"] is None:
+            continue
+        top_bottlenecks.append({
+            "rank": i,
+            "component": r["component"],
+            "average_ms": float(r["average_ms"]),
+            "p95_ms": r.get("p95_ms"),
+            "sample_count": r.get("sample_count"),
+        })
+
+    # Percent contributions (share of measured latency across ranked components)
+    sum_avgs = sum([b["average_ms"] for b in top_bottlenecks]) if top_bottlenecks else 0.0
+    for b in top_bottlenecks:
+        if sum_avgs > 0:
+            b["percent_of_total_ms"] = round((b["average_ms"] / sum_avgs) * 100.0, 1)
+        else:
+            b["percent_of_total_ms"] = None
+
+    # Deterministic optimization opportunities with simple expected gain estimate
+    thresholds = {"Network": 100.0, "Gemini": 200.0, "Playback": 100.0, "Frontend Rendering": 50.0, "PCM Decode": 10.0}
+    difficulty_map = {"Gemini": "MEDIUM", "Network": "MEDIUM", "Playback": "LOW", "Frontend Rendering": "LOW", "PCM Decode": "LOW"}
+
+    optimization_opportunities: List[Dict[str, Any]] = []
+    recommendations: List[str] = []
+    for b in top_bottlenecks:
+        comp = b["component"]
+        avg = float(b["average_ms"]) if b.get("average_ms") is not None else None
+        target = thresholds.get(comp)
+        if avg is None:
+            continue
+        expected_user_gain_ms = round(avg - target, 2) if (target is not None and avg > target) else 0.0
+        if expected_user_gain_ms >= 200:
+            estimated_impact = "HIGH"
+        elif expected_user_gain_ms >= 50:
+            estimated_impact = "MEDIUM"
+        elif expected_user_gain_ms > 0:
+            estimated_impact = "LOW"
+        else:
+            estimated_impact = "NONE"
+
+        difficulty = difficulty_map.get(comp, "UNKNOWN")
+
+        # Reason: prefer describing whether it's sustained average or tail-latency
+        reason = "sustained high average" if (target is not None and avg > target * 1.5) else ("tail latency (p95)" if (b.get("p95_ms") and target is not None and b.get("p95_ms") > target * 1.5) else "elevated average")
+
+        optimization_opportunities.append({
+            "component": comp,
+            "priority": ("HIGH" if expected_user_gain_ms >= 200 else ("MEDIUM" if expected_user_gain_ms >= 50 else ("LOW" if expected_user_gain_ms > 0 else "NONE"))),
+            "expected_user_gain_ms": expected_user_gain_ms,
+            "estimated_impact": estimated_impact,
+            "difficulty": difficulty,
+            "reason": reason,
+            "current_value_ms": avg,
+            "target_value_ms": float(target) if target is not None else None,
+            "percent_of_total_ms": b.get("percent_of_total_ms"),
+        })
+
+        if target is None:
+            recommendations.append(f"{comp}: no target defined; measured avg {avg} ms")
+        else:
+            if avg > target:
+                recommendations.append(f"{comp} latency exceeds target: avg {avg} ms > {target} ms")
+            else:
+                recommendations.append(f"{comp} latency within target: avg {avg} ms <= {target} ms")
+
+    # Additional deterministic recommendations from validation and completion
+    if measured["validation"].get("ordering_errors"):
+        recommendations.append(f"Trace ordering issues detected: {measured['validation']['ordering_errors']}")
+    if completion_pct is not None:
+        if completion_pct < 90.0:
+            recommendations.append(f"Completion rate below threshold: {completion_pct}% < 90%")
+        else:
+            recommendations.append(f"Completion rate OK: {completion_pct}% >= 90%")
+
+    # Engineering reference blocks: description, formula, meaning, and measurement anchor
+    # Choose the first candidate key that has a non-zero average if possible,
+    # otherwise fall back to the first available candidate. This avoids
+    # preserving a zero-valued anchor when a correct non-zero metric exists.
+    def _ref_block(title: str, formula: str, meaning: str, key_candidates: List[str], overlap_key: Optional[str] = None):
+        chosen_key = None
+        chosen_stat = {"average": None}
+        for k in key_candidates:
+            if k in summary:
+                s = _get_stat(summary, k)
+                avg = s.get("average")
+                if avg is not None and avg > 0:
+                    chosen_key = k
+                    chosen_stat = s
+                    break
+        if chosen_key is None:
+            for k in key_candidates:
+                if k in summary:
+                    chosen_key = k
+                    chosen_stat = _get_stat(summary, k)
+                    break
+
+        overlap = None
+        if overlap_key and overlap_key in summary:
+            overlap = float(summary.get(overlap_key, {}).get("avg_ms")) if summary.get(overlap_key) else None
+        return {
+            "description": title,
+            "formula": formula,
+            "engineering_meaning": meaning,
+            "measurement_anchor": chosen_key,
+            "measurement": chosen_stat,
+            "turn_overlap_ms": overlap,
+        }
+
+    engineering_reference = {
+        "TTFT": _ref_block("First text response (TTFT)", "MIC_FRAME_RECEIVED -> first TEXT_PACKET_RECEIVED or REACT_RENDER_COMPLETED", "Time until first translated text token is available to render.", ["ttft_ms", "time_to_first_text_render_ms", "time_to_first_text_arrival_ms"], "ttft_overlap_ms"),
+        "TTFA": _ref_block("First audio response (TTFA)", "MIC_FRAME_RECEIVED -> first AUDIO_PLAYBACK_STARTED", "Time until first translated audio chunk is scheduled to play on client.", ["ttfa_ms", "time_to_first_audio_playback_ms", "time_to_first_audio_frontend_ms"], "ttfa_overlap_ms"),
+        "Gemini_Wait": _ref_block("Gemini wait", "AUDIO_STREAM_END_SENT -> GEMINI_FIRST_AUDIO", "Time between turn commit and first backend audio packet from Gemini.", ["gemini_wait_ms"], "gemini_wait_overlap_ms"),
+        "Turn_Decision": _ref_block("Turn decision latency", "LAST_MIC_FRAME -> AUDIO_STREAM_END_SENT", "VAD debounce and backend decision latency.", ["turn_decision_latency_ms"]),
+        "Playback_Scheduling": _ref_block("Playback scheduling delay", "AUDIO_PACKET_RECEIVED -> AUDIO_PLAYBACK_SCHEDULED", "Client scheduling delay between receiving audio packet and scheduling playback.", ["playback_scheduling_delay_ms", "first_audio_to_first_playback_ms"]),
+        "Network": _ref_block("Network publish->receive", "PUBLISH -> RECEIVE", "Measured publish to receive latency between publisher and client.", ["network_publish_to_receive_ms"]),
+        "PCM_Decode": _ref_block("PCM decode", "PCM_START -> PCM_COMPLETE", "Time spent decoding PCM on client.", ["pcm_decode_ms"]),
+        "Frontend_Rendering": _ref_block("Frontend text render", "TEXT_PACKET_RECEIVED -> REACT_RENDER_COMPLETED", "Time for text to be rendered in the client.", ["text_render_latency_ms"]),
+    }
+
+    # User-experience: pick the most appropriate anchor for TTFT/TTFA.
+    # Prefer a candidate with a positive average; fallback to the first available.
+    def _choose_positive_key(candidates: List[str]) -> Optional[str]:
+        for k in candidates:
+            if k in summary:
+                s = _get_stat(summary, k)
+                avg = s.get("average")
+                if avg is not None and avg > 0:
+                    return k
+        for k in candidates:
+            if k in summary:
+                return k
+        return None
+
+    ttft_key = _choose_positive_key(["ttft_ms", "time_to_first_text_render_ms", "time_to_first_text_arrival_ms"])
+    # Prefer the actual playback anchor (`time_to_first_audio_playback_ms`) over `ttfa_ms`.
+    ttfa_key = _choose_positive_key(["time_to_first_audio_playback_ms", "time_to_first_audio_frontend_ms", "ttfa_ms"])
+
+    ttft = {
+        "actual_wait": _get_stat(summary, ttft_key) if ttft_key else {"average": None},
+        "raw": _get_stat(summary, "ttft_raw_ms") if "ttft_raw_ms" in summary else {"average": None},
+    }
+    ttfa = {
+        "actual_wait": _get_stat(summary, ttfa_key) if ttfa_key else {"average": None},
+        "raw": _get_stat(summary, "ttfa_raw_ms") if "ttfa_raw_ms" in summary else {"average": None},
+    }
+
+    # End-to-end breakdown: speech vs processing
+    end_stat = _get_stat(summary, "end_to_end_ms")
+    speech_stat = _get_stat(summary, "speech_duration_ms")
+    processing_avg = None
+    if end_stat.get("average") is not None and speech_stat.get("average") is not None:
+        processing_avg = round(end_stat.get("average") - speech_stat.get("average"), 3)
+
+    end_to_end_breakdown = {
+        "speech_duration_ms": speech_stat,
+        "pipeline_processing_ms": {"average": processing_avg},
+        "total_ms": end_stat,
+    }
+
+    # Pipeline flow (ordered for readability)
+    pipeline_flow = [
+        {"step": "Turn Decision", "average_ms": _get_stat(summary, "turn_decision_latency_ms").get("average")},
+        {"step": "Gemini", "average_ms": _get_stat(summary, "gemini_processing_ms").get("average")},
+        {"step": "Network", "average_ms": _get_stat(summary, "network_publish_to_receive_ms").get("average")},
+        {"step": "Playback", "average_ms": _get_stat(summary, "playback_scheduling_delay_ms").get("average")},
+        {"step": "Frontend", "average_ms": _get_stat(summary, "text_render_latency_ms").get("average")},
+        {"step": "PCM", "average_ms": _get_stat(summary, "pcm_decode_ms").get("average")},
+    ]
+
+    # Pipeline breakdown: show each stage's formula + average + p95 (re-added)
+    pipeline_breakdown = {
+        "turn_decision": {"description": "VAD debounce and decision", "formula": "LAST_MIC_FRAME -> AUDIO_STREAM_END_SENT", "average_ms": _get_stat(summary, "turn_decision_latency_ms").get("average"), "p95_ms": _get_stat(summary, "turn_decision_latency_ms").get("p95")},
+        "gemini_processing": {"description": "Gemini processing", "formula": "AUDIO_SENT_TO_GEMINI -> GEMINI_FIRST_TOKEN/AUDIO", "average_ms": _get_stat(summary, "gemini_processing_ms").get("average"), "p95_ms": _get_stat(summary, "gemini_processing_ms").get("p95")},
+        "network": {"description": "Publish -> Receive", "formula": "PUBLISH -> RECEIVE", "average_ms": _get_stat(summary, "network_publish_to_receive_ms").get("average"), "p95_ms": _get_stat(summary, "network_publish_to_receive_ms").get("p95")},
+        "playback_scheduling": {"description": "Audio packet -> scheduled playback", "formula": "AUDIO_PACKET_RECEIVED -> AUDIO_PLAYBACK_SCHEDULED", "average_ms": _get_stat(summary, "playback_scheduling_delay_ms").get("average"), "p95_ms": _get_stat(summary, "playback_scheduling_delay_ms").get("p95")},
+        "pcm_decode": {"description": "PCM decode on client", "formula": "PCM_START -> PCM_COMPLETE", "average_ms": _get_stat(summary, "pcm_decode_ms").get("average"), "p95_ms": _get_stat(summary, "pcm_decode_ms").get("p95")},
+        "frontend": {"description": "Text render latency", "formula": "TEXT_PACKET_RECEIVED -> REACT_RENDER_COMPLETED", "average_ms": _get_stat(summary, "text_render_latency_ms").get("average"), "p95_ms": _get_stat(summary, "text_render_latency_ms").get("p95")},
+    }
+
+    # Session analysis: averages, longest/shortest turn, total session duration
+    speech_min = speech_stat.get("min")
+    speech_max = speech_stat.get("max")
+    avg_turns = total_corr
+    total_session_duration_ms = None
+    per_corr = metrics.get("per_correlation", {}) or {}
+    if per_corr:
+        total_session_duration_ms = 0.0
+        for c in per_corr.values():
+            cm = c.get("metrics", {}).get("correlation_completion_ms")
+            if cm is not None:
+                try:
+                    total_session_duration_ms += float(cm)
+                except Exception:
+                    pass
+
+    # Cold start heuristic: first gemini processing >> median
+    first_corr_key = next(iter(per_corr), None)
+    cold_start = None
+    if first_corr_key and per_corr.get(first_corr_key):
+        first_gemini = per_corr.get(first_corr_key, {}).get("metrics", {}).get("gemini_processing_ms")
+        median_gemini = component_stats.get("Gemini", {}).get("median")
+        if first_gemini is not None and median_gemini is not None:
+            cold_start = bool(first_gemini > (median_gemini * 1.5))
+
+    # Cold start label (heuristic) — keep the boolean but clearly mark inference
+    cold_label = None
+    if cold_start is not None:
+        cold_label = "Likely Cold Start (heuristic)" if cold_start else "Not Cold Start (heuristic)"
+
+    session_analysis = {
+        "cold_start_heuristic": cold_start,
+        "cold_start_label": cold_label,
+        "warm_session": (False if cold_start else True) if cold_start is not None else None,
+        "average_turns": avg_turns,
+        "longest_turn_ms": speech_max,
+        "shortest_turn_ms": speech_min,
+        "total_session_duration_ms": total_session_duration_ms,
+    }
+
+    # Streaming quality summary
+    cont_pct = measured["streaming"].get("continuous_audio_pct")
+    if cont_pct is not None:
+        if cont_pct >= 99.0:
+            stream_quality_label = "Excellent"
+        elif cont_pct >= 95.0:
+            stream_quality_label = "Good"
+        elif cont_pct >= 90.0:
+            stream_quality_label = "Fair"
+        else:
+            stream_quality_label = "Poor"
+    else:
+        stream_quality_label = None
+
+    streaming_quality = {
+        "quality_label": stream_quality_label,
+        "total_playback_chunks": measured["streaming"].get("total_playback_chunks"),
+        "restart_count": measured["streaming"].get("restart_count"),
+        "starvation_count": measured["streaming"].get("starvation_count"),
+        "continuous_audio_pct": measured["streaming"].get("continuous_audio_pct"),
+        "maximum_gap_ms": measured["streaming"].get("maximum_gap_ms"),
+    }
+
+    # Streaming overlap: early/overlap stats for key metrics
+    streaming_overlap = {
+        "ttft_overlap_ms": _get_stat(summary, "ttft_overlap_ms"),
+        "ttfa_overlap_ms": _get_stat(summary, "ttfa_overlap_ms"),
+        "gemini_wait_overlap_ms": _get_stat(summary, "gemini_wait_overlap_ms"),
+    }
+
+    # Component performance: full statistics per component (keep existing shape)
+    component_performance = {
+        "gemini": component_stats.get("Gemini"),
+        "network": component_stats.get("Network"),
+        "playback": component_stats.get("Playback"),
+        "frontend": component_stats.get("Frontend Rendering"),
+        "pcm": component_stats.get("PCM Decode"),
+    }
+
+    validation_section = {
+        "trace_valid": measured["validation"].get("trace_valid"),
+        "trace_quality": measured["validation"].get("trace_quality"),
+        "ordering_errors": measured["validation"].get("ordering_errors"),
+        "duplicate_events": measured["validation"].get("duplicate_events"),
+        "missing_events": measured["validation"].get("missing_events"),
+        "clock_issues_count": measured["validation"].get("clock_issues_count"),
+        "correlation_completion": {"total": total_corr, "completed": completed_corr, "incomplete": incomplete_corr},
+    }
+
+    # Executive summary lightly updated to reference new breakdowns
+    executive_summary = {
+        "session_health": measured["session_health"],
+        "streaming_summary": {
+            "continuous_audio_pct": measured["streaming"].get("continuous_audio_pct"),
+            "average_gap_ms": measured["streaming"].get("average_gap_ms"),
+        },
+        "primary_bottleneck": top_bottlenecks[0]["component"] if top_bottlenecks else None,
+        "trace_quality": measured["validation"].get("trace_quality"),
+        "quick_summary": {
+            "completed_turns": measured["session_health"].get("completed_correlations"),
+            "avg_end_to_end_ms": measured["end_to_end_latency_ms"].get("average"),
+            "avg_source_transcript_ms": _get_stat(summary, "source_transcript_latency_ms").get("average"),
+            "avg_target_transcript_ms": _get_stat(summary, "target_transcript_latency_ms").get("average"),
+            "avg_translation_audio_ms": _get_stat(summary, "translation_audio_latency_ms").get("average"),
+            "continuous_streaming_pct": measured["streaming"].get("continuous_audio_pct"),
+        }
+    }
+
+    # Helper: build user-facing KPI block with availability and reason when missing
+    def _mk_user_block(key: str, per_corr_reason_key: str, event_name: str) -> Dict[str, Optional[float]]:
+        stat = _get_stat(summary, key)
+        block = dict(stat)
+        # If we have sample_count > 0 treat as available
+        if block.get("sample_count"):
+            block["status"] = "AVAILABLE"
+        else:
+            # Try to find a human-readable reason from per-correlation metrics
+            reason = None
+            for c in per_corr.values():
+                r = c.get("metrics", {}).get(per_corr_reason_key)
+                if r:
+                    reason = r
+                    break
+            if not reason:
+                reason = f"{event_name} event missing"
+            block["status"] = "NOT_AVAILABLE"
+            block["reason"] = reason
+        return block
+
+    # User Experience: top-level user-facing KPIs (frontend-anchored)
+    user_experience = {
+        "source_transcript": _mk_user_block("source_transcript_latency_ms", "source_transcript_unavailable_reason", "SOURCE_TRANSCRIPT_RENDERED"),
+        "target_transcript": _mk_user_block("target_transcript_latency_ms", "target_transcript_unavailable_reason", "TARGET_TRANSCRIPT_RENDERED"),
+        "translation_audio": _mk_user_block("translation_audio_latency_ms", "translation_audio_unavailable_reason", "AUDIO_FIRST_AUDIBLE"),
+        "end_to_end_breakdown": end_to_end_breakdown,
+        "continuous_streaming_pct": measured["streaming"].get("continuous_audio_pct"),
+    }
+
+    # Clarify detection method for AUDIO_FIRST_AUDIBLE so consumers understand
+    # this is an approximate client-side metric and not a hardware audibility timestamp.
+    try:
+        if "translation_audio" in user_experience and isinstance(user_experience["translation_audio"], dict):
+            user_experience["translation_audio"]["detection_method"] = (
+                "Client-side audible detection: AnalyserNode RMS threshold "
+                "(frontend implementation polls Web Audio AnalyserNode and emits AUDIO_FIRST_AUDIBLE when RMS crosses a low threshold)."
+            )
+    except Exception:
+        pass
+
+    session_section = {
+        "session_id": metrics.get("session_id"),
+        "generated_at": _iso_from_epoch_ms(metrics.get("generated_at_epoch_ms")),
+        "benchmark_version": BENCHMARK_ENGINE_VERSION,
+        "metrics_version": metrics.get("metrics_schema_version"),
+        "trace_validation_version": val.get("validation_schema_version") or val.get("trace_validation_version"),
+        "metrics_engine_version": metrics.get("metrics_engine_version"),
+        "benchmark_engine_version": BENCHMARK_ENGINE_VERSION,
+    }
+
+    benchmark = {
+        "session": session_section,
+        "executive_summary": executive_summary,
+        "user_experience": user_experience,
+        "streaming_overlap": streaming_overlap,
+        "pipeline_flow": pipeline_flow,
+        "pipeline_breakdown": pipeline_breakdown,
+        "streaming_health": measured["streaming"],
+        "streaming_quality": streaming_quality,
+        "component_performance": component_performance,
+        "validation_trace_health": validation_section,
+        "bottlenecks": top_bottlenecks,
+        "optimization_opportunities": optimization_opportunities,
+        "session_analysis": session_analysis,
+        "derived_insights": {"recommendations": recommendations, "session_status": {"completion_pct": completion_pct, "total_correlations": total_corr}},
+        "engineering_reference": engineering_reference,
+    }
 
     try:
-        with open(benchmark_path, "w", encoding="utf-8") as f:
-            json.dump(benchmark_data, f, indent=2)
-        logger.info(f"[BenchmarkEngine] BENCHMARK_JSON_WRITTEN — path={benchmark_path}")
+        with out_path.open("w", encoding="utf-8") as f:
+            json.dump(benchmark, f, indent=2)
+        logger.info("Wrote benchmark.json → %s", out_path)
     except Exception as e:
-        logger.error(f"[BenchmarkEngine] Failed to write benchmark.json to {benchmark_path}: {e}")
+        logger.exception("Failed to write benchmark.json: %s", e)
 
-    elapsed_ms = (time.perf_counter() - start_time) * 1000.0
-    logger.info(f"[BenchmarkEngine] BENCHMARK_GENERATION_COMPLETED — generation_time_ms={elapsed_ms:.1f}")
+    return benchmark
+
+
+if __name__ == "__main__":
+    # Allow manual invocation for verification during development; this
+    # does not create a second generator — it simply exercises the
+    # canonical benchmark_engine.
+    import sys
+    from pathlib import Path
+
+    if len(sys.argv) < 2:
+        print("Usage: python benchmark_engine.py <session_output_dir>")
+        raise SystemExit(2)
+    sd = Path(sys.argv[1])
+    generate_benchmark(sd)

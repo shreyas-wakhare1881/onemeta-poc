@@ -1,5 +1,5 @@
 """
-Unit tests for the Benchmark Engine (Phase 4)
+Unit tests for the Simplified Benchmark Engine (Phase 6)
 """
 from __future__ import annotations
 
@@ -7,99 +7,6 @@ import json
 import tempfile
 from pathlib import Path
 from backend.app.audio import benchmark_engine
-
-
-def test_compute_stats_empty():
-    res = benchmark_engine._compute_stats([])
-    assert res["min"] is None
-    assert res["max"] is None
-    assert res["average"] is None
-    assert res["median"] is None
-
-
-def test_compute_stats_normal():
-    # Values: [100.0, 200.0, 300.0]
-    res = benchmark_engine._compute_stats([100.0, 200.0, 300.0], [90, 95])
-    assert res["min"] == 100.0
-    assert res["max"] == 300.0
-    assert res["average"] == 200.0
-    assert res["median"] == 200.0
-    assert res["p90"] == 280.0
-    assert res["p95"] == 290.0
-
-
-def test_calculate_performance_score():
-    # Perfect score scenario
-    score_data = benchmark_engine._calculate_performance_score(
-        success_rate=100.0,
-        e2e_avg=500.0,
-        gemini_avg=120.0,
-        playback_avg=80.0,
-        network_avg=15.0
-    )
-    assert score_data["score"] == 100
-    assert score_data["overall"] == "A"
-
-    # Lower score scenario
-    score_data_low = benchmark_engine._calculate_performance_score(
-        success_rate=50.0,
-        e2e_avg=2000.0,
-        gemini_avg=500.0,
-        playback_avg=300.0,
-        network_avg=100.0
-    )
-    assert score_data_low["score"] < 70
-    assert score_data_low["overall"] in ("D", "F")
-
-
-def test_compute_top_bottlenecks():
-    bottlenecks = benchmark_engine._compute_top_bottlenecks(
-        playback_avg=400.0,
-        gemini_avg=150.0,
-        network_avg=30.0,
-        frontend_avg=12.0,
-        pcm_avg=0.5
-    )
-    assert len(bottlenecks) == 5
-    assert bottlenecks[0]["component"] == "Playback"
-    assert bottlenecks[0]["average_ms"] == 400.0
-    assert bottlenecks[0]["rank"] == 1
-    assert bottlenecks[1]["component"] == "Gemini"
-    assert bottlenecks[4]["component"] == "PCM Decode"
-
-
-def test_compute_opportunities():
-    opps = benchmark_engine._compute_opportunities(
-        playback_avg=400.0,  # target: 100 -> gain: 300 (HIGH)
-        gemini_avg=180.0,    # target: 150 -> gain: 30 (MEDIUM)
-        network_avg=15.0,    # target: 20 -> gain: 0 (None)
-        frontend_avg=12.0,   # target: 10 -> gain: 2 (LOW)
-        pcm_avg=0.1          # target: 0.2 -> gain: 0 (None)
-    )
-    assert len(opps) == 3
-    assert opps[0]["component"] == "Playback"
-    assert opps[0]["priority"] == "HIGH"
-    assert opps[0]["expected_gain_ms"] == 300.0
-
-    assert opps[1]["component"] == "Gemini"
-    assert opps[1]["priority"] == "MEDIUM"
-
-    assert opps[2]["component"] == "Frontend Rendering"
-    assert opps[2]["priority"] == "LOW"
-
-
-def test_generate_recommendations():
-    recs = benchmark_engine._generate_recommendations(
-        success_rate=85.0,
-        playback_avg=350.0,
-        gemini_avg=120.0,
-        network_avg=15.0,
-        frontend_avg=8.0,
-        pcm_avg=0.1
-    )
-    assert any("Playback scheduling delay is high" in r for r in recs)
-    assert any("Gemini latency is within expected limits" in r for r in recs)
-    assert any("Session success rate is low" in r for r in recs)
 
 
 def test_generate_benchmark_integration():
@@ -110,35 +17,77 @@ def test_generate_benchmark_integration():
         # Mock metrics.json content
         mock_metrics = {
             "session_id": "integration-test-session",
-            "metrics_schema_version": 1,
+            "metrics_schema_version": 2,
             "total_correlations": 2,
             "completed_correlations": 2,
             "incomplete_correlations": 0,
-            "per_correlation": {
-                "corr-1": {
-                    "metrics": {
-                        "end_to_end_ms": 500.0,
-                        "gemini_processing_ms": 120.0,
-                        "playback_scheduling_delay_ms": 80.0,
-                        "network_publish_to_receive_ms": 15.0,
-                        "pcm_decode_ms": 0.2,
-                        "text_render_latency_ms": 8.0,
-                        "time_to_first_text_render_ms": 220.0,
-                        "time_to_first_audio_frontend_ms": 150.0
-                    }
+            "metrics_summary": {
+                "ttfa_ms": {
+                    "avg_ms": 245.0,
+                    "p95_ms": 320.0,
+                    "count": 2,
+                    "coverage_pct": 100.0
                 },
-                "corr-2": {
-                    "metrics": {
-                        "end_to_end_ms": 600.0,
-                        "gemini_processing_ms": 130.0,
-                        "playback_scheduling_delay_ms": 90.0,
-                        "network_publish_to_receive_ms": 20.0,
-                        "pcm_decode_ms": 0.3,
-                        "text_render_latency_ms": 10.0,
-                        "time_to_first_text_render_ms": 240.0,
-                        "time_to_first_audio_frontend_ms": 160.0
-                    }
+                "ttfa_overlap_ms": {
+                    "avg_ms": 10.0,
+                    "p95_ms": 15.0,
+                    "count": 2,
+                    "coverage_pct": 100.0
+                },
+                "ttft_ms": {
+                    "avg_ms": 180.0,
+                    "p95_ms": 210.0,
+                    "count": 2,
+                    "coverage_pct": 100.0
+                },
+                "ttft_overlap_ms": {
+                    "avg_ms": 20.0,
+                    "p95_ms": 30.0,
+                    "count": 2,
+                    "coverage_pct": 100.0
+                },
+                "gemini_wait_ms": {
+                    "avg_ms": 150.0,
+                    "p95_ms": 180.0,
+                    "count": 2,
+                    "coverage_pct": 100.0
+                },
+                "gemini_wait_overlap_ms": {
+                    "avg_ms": 30.0,
+                    "p95_ms": 40.0,
+                    "count": 2,
+                    "coverage_pct": 100.0
+                },
+                "first_audio_to_first_playback_ms": {
+                    "avg_ms": 80.0,
+                    "p95_ms": 90.0,
+                    "count": 2,
+                    "coverage_pct": 100.0
+                },
+                "speech_duration_ms": {
+                    "avg_ms": 1200.0,
+                    "p95_ms": 1500.0,
+                    "count": 2,
+                    "coverage_pct": 100.0
+                },
+                "turn_decision_latency_ms": {
+                    "avg_ms": 600.0,
+                    "p95_ms": 600.0,
+                    "count": 2,
+                    "coverage_pct": 100.0
                 }
+            },
+            "streaming_continuity": {
+                "total_playback_chunks": 12,
+                "inter_chunk_gap_count": 10,
+                "average_gap_ms": 15.0,
+                "maximum_gap_ms": 45.0,
+                "median_gap_ms": 12.0,
+                "p95_gap_ms": 35.0,
+                "restart_count": 0,
+                "restart_threshold_ms": 500.0,
+                "starvation_count": 0,
+                "continuous_audio_pct": 100.0
             }
         }
 
@@ -154,12 +103,18 @@ def test_generate_benchmark_integration():
         with open(benchmark_file, "r", encoding="utf-8") as f:
             bench_data = json.load(f)
 
-        assert bench_data["session"]["session_id"] == "integration-test-session"
-        assert bench_data["measured_benchmarks"]["session_health"]["success_rate_percent"] == 100.0
-        assert bench_data["measured_benchmarks"]["end_to_end_latency_ms"]["average"] == 550.0
-        assert bench_data["measured_benchmarks"]["gemini_processing_ms"]["average"] == 125.0
-        assert bench_data["derived_insights"]["performance_score"]["score"] == 100
-        assert bench_data["derived_insights"]["performance_score"]["overall"] == "A"
+        assert bench_data["session_id"] == "integration-test-session"
+        assert bench_data["session_health"]["total_correlations"] == 2
+        assert bench_data["primary_kpis"]["ttfa"]["average_ms"] == 245.0
+        assert bench_data["primary_kpis"]["ttfa"]["turn_overlap_ms"] == 10.0
+        assert bench_data["primary_kpis"]["ttft"]["average_ms"] == 180.0
+        assert bench_data["primary_kpis"]["ttft"]["turn_overlap_ms"] == 20.0
+        assert bench_data["primary_kpis"]["gemini_wait"]["average_ms"] == 150.0
+        assert bench_data["primary_kpis"]["gemini_wait"]["turn_overlap_ms"] == 30.0
+        assert bench_data["primary_kpis"]["ttfa"]["coverage_pct"] == 100.0
+        assert bench_data["streaming"]["p95_gap_ms"] == 35.0
+        assert bench_data["bottlenecks"][0]["stage"] == "vad_debounce_delay"
+        assert bench_data["executive_summary"]["ttfa_ms"] == 245.0
 
 
 def test_generate_benchmark_missing_metrics():
@@ -186,11 +141,12 @@ def test_generate_benchmark_empty_correlations():
         # Mock metrics.json with empty correlations
         mock_metrics = {
             "session_id": "empty-session",
-            "metrics_schema_version": 1,
+            "metrics_schema_version": 2,
             "total_correlations": 0,
             "completed_correlations": 0,
             "incomplete_correlations": 0,
-            "per_correlation": {}
+            "metrics_summary": {},
+            "streaming_continuity": {}
         }
 
         with open(metrics_file, "w", encoding="utf-8") as f:
@@ -208,13 +164,6 @@ def test_generate_benchmark_empty_correlations():
         with open(benchmark_file, "r", encoding="utf-8") as f:
             bench_data = json.load(f)
 
-        assert bench_data["session"]["session_id"] == "empty-session"
-        assert bench_data["measured_benchmarks"]["session_health"]["success_rate_percent"] == 0.0
-        
-        # Derived insights for empty/null metrics
-        assert bench_data["derived_insights"]["performance_score"]["overall"] == "N/A"
-        assert bench_data["derived_insights"]["performance_score"]["score"] == 0
-        assert bench_data["derived_insights"]["top_bottlenecks"] == []
-        assert bench_data["derived_insights"]["optimization_opportunities"] == []
-        assert bench_data["derived_insights"]["recommendations"] == ["No valid benchmark data available for this session."]
-
+        assert bench_data["session_id"] == "empty-session"
+        assert bench_data["primary_kpis"]["ttfa"]["average_ms"] is None
+        assert bench_data["primary_kpis"]["ttft"]["average_ms"] is None

@@ -89,6 +89,14 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
         self._cumulative_text_len = 0
         self.tracer = tracer
 
+        # Per-turn Gemini observability state
+        # Reset when correlation_id changes (new speech turn)
+        self._turn_first_token_logged = False   # GEMINI_FIRST_TOKEN emitted for this turn?
+        self._turn_first_audio_logged = False   # GEMINI_FIRST_AUDIO emitted for this turn?
+        self._turn_text_chunk_count = 0         # text deltas in this turn
+        self._turn_audio_chunk_count = 0        # audio chunks in this turn
+        self._turn_start_epoch_ms: float = 0.0  # epoch when this turn's corr_id was set
+
     async def send_packet(self, packet: StreamingAudioPacket) -> None:
         if self.closed:
             return
@@ -98,7 +106,15 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
         if packet.metadata:
             corr_id = packet.metadata.correlation_id
             frame_id = packet.metadata.frame_id
-            if corr_id:
+            if corr_id and corr_id != self._current_correlation_id:
+                # New correlation / new speech turn — reset per-turn Gemini state
+                self._current_correlation_id = corr_id
+                self._turn_first_token_logged = False
+                self._turn_first_audio_logged = False
+                self._turn_text_chunk_count = 0
+                self._turn_audio_chunk_count = 0
+                self._turn_start_epoch_ms = time.time() * 1000.0
+            elif corr_id:
                 self._current_correlation_id = corr_id
 
         self._input_packets_sent_count += 1
@@ -256,6 +272,7 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
                         delta = content.output_transcription.text
                         if delta:
                             self._text_chunk_count += 1
+                            self._turn_text_chunk_count += 1
                             self._cumulative_text_len += len(delta)
                             if self.tracer:
                                 from ...audio.tracing_events import PipelineEvent
@@ -269,6 +286,22 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
                                         "text_delta": delta
                                     }
                                 )
+                                # GEMINI_FIRST_TOKEN: fired once per turn on the very first
+                                # translated text delta — this is the "Gemini wait time" endpoint.
+                                # Formula: AUDIO_STREAM_END_SENT → GEMINI_FIRST_TOKEN = Gemini TTFT
+                                if not self._turn_first_token_logged:
+                                    self._turn_first_token_logged = True
+                                    self.tracer.log_event(
+                                        PipelineEvent.GEMINI_FIRST_TOKEN,
+                                        correlation_id=self._current_correlation_id,
+                                        metadata={
+                                            "text_delta": delta,
+                                            "text_length": len(delta),
+                                            "turn_text_chunk_index": self._turn_text_chunk_count,
+                                            "turn_audio_chunk_count_so_far": self._turn_audio_chunk_count,
+                                            "epoch_ms": time.time() * 1000.0
+                                        }
+                                    )
                             events_extracted.append(
                                 StreamingPartialTranslationEvent(
                                     session_id=self.session_id,
@@ -295,6 +328,7 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
                         # If we received translated audio chunks, emit a StreamingTranslationAudioEvent
                         if audio_data:
                             self._received_audio_count += 1
+                            self._turn_audio_chunk_count += 1
                             self._output_wav.write(audio_data)
                             logger.info(f"EXPERIMENT TIMING: Received Gemini Audio Chunk #{self._received_audio_count} at {time.time():.4f}")
                             if self.tracer:
@@ -310,6 +344,22 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
                                         "chunk_index": self._received_audio_count
                                     }
                                 )
+                                # GEMINI_FIRST_AUDIO: fired once per turn on the very first
+                                # audio chunk — this is the "Gemini audio latency" endpoint.
+                                # Formula: AUDIO_STREAM_END_SENT → GEMINI_FIRST_AUDIO = Gemini audio wait time
+                                if not self._turn_first_audio_logged:
+                                    self._turn_first_audio_logged = True
+                                    self.tracer.log_event(
+                                        PipelineEvent.GEMINI_FIRST_AUDIO,
+                                        correlation_id=self._current_correlation_id,
+                                        metadata={
+                                            "pcm_bytes": len(audio_data),
+                                            "duration_sec": duration_sec,
+                                            "turn_audio_chunk_index": self._turn_audio_chunk_count,
+                                            "turn_text_chunk_count_so_far": self._turn_text_chunk_count,
+                                            "epoch_ms": time.time() * 1000.0
+                                        }
+                                    )
                             events_extracted.append(
                                 StreamingTranslationAudioEvent(
                                     session_id=self.session_id,
@@ -357,6 +407,20 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
                     # C. Turn complete boundary
                     if content.turn_complete:
                         self._last_transcript = ""
+                        # Emit GEMINI_TURN_COMPLETE with per-turn production summary
+                        if self.tracer:
+                            from ...audio.tracing_events import PipelineEvent
+                            self.tracer.log_event(
+                                PipelineEvent.GEMINI_TURN_COMPLETE,
+                                correlation_id=self._current_correlation_id,
+                                metadata={
+                                    "turn_text_chunks": self._turn_text_chunk_count,
+                                    "turn_audio_chunks": self._turn_audio_chunk_count,
+                                    "first_token_logged": self._turn_first_token_logged,
+                                    "first_audio_logged": self._turn_first_audio_logged,
+                                    "epoch_ms": time.time() * 1000.0
+                                }
+                            )
                         events_extracted.append(
                             StreamingTranslationCompletedEvent(
                                 session_id=self.session_id,
@@ -403,8 +467,12 @@ class GeminiLiveTranslateTransport(BaseStreamingTransport):
                 continue
 
             except StopAsyncIteration:
-                logger.info(f"GeminiLiveTranslateTransport {self.session_id}: Receive iterator exhausted.")
-                return None
+                if not self.closed:
+                    logger.info(f"GeminiLiveTranslateTransport {self.session_id}: Receive iterator exhausted (turn completed). Recreating iterator.")
+                    self._receive_iterator = self.sdk_session.receive()
+                    continue
+                else:
+                    return None
             except Exception as e:
                 if self.closed:
                     return None

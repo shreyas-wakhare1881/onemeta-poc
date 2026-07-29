@@ -68,7 +68,9 @@ export class PipelineEventTracer {
     if (
       event === PipelineEvent.TEXT_PACKET_RECEIVED || 
       event === PipelineEvent.AUDIO_PACKET_RECEIVED || 
-      event === PipelineEvent.REACT_RENDER_COMPLETED
+      event === PipelineEvent.REACT_RENDER_COMPLETED ||
+      event === PipelineEvent.SOURCE_TRANSCRIPT_RENDERED ||
+      event === PipelineEvent.TARGET_TRANSCRIPT_RENDERED
     ) {
       return 'frontend';
     }
@@ -78,9 +80,16 @@ export class PipelineEventTracer {
       event === PipelineEvent.AUDIO_SCHEDULED || 
       event === PipelineEvent.AUDIO_PLAYBACK_SCHEDULED ||
       event === PipelineEvent.AUDIO_PLAYBACK_STARTED ||
+      event === PipelineEvent.AUDIO_FIRST_AUDIBLE ||
       event === PipelineEvent.AUDIO_PLAYBACK_COMPLETED ||
       event === PipelineEvent.AUDIO_CONTEXT_STATE ||
-      event === PipelineEvent.NEXT_PLAYTIME_UPDATED
+      event === PipelineEvent.NEXT_PLAYTIME_UPDATED ||
+      // Fix: PLAYBACK_DROP_DECISION and PLAYBACK_TRIM_APPLIED use browser performance.now()
+      // timestamps. Without 'pcm' classification here, they fall through to 'unknown',
+      // causing the trace validator to compare them against backend monotonic clocks
+      // (a ~634 trillion ns gap), producing spurious critical ordering errors.
+      event === PipelineEvent.PLAYBACK_DROP_DECISION ||
+      event === PipelineEvent.PLAYBACK_TRIM_APPLIED
     ) {
       return 'pcm';
     }
