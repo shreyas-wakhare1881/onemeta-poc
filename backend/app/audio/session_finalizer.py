@@ -268,6 +268,13 @@ def finalize_session_trace(session_dir: Path) -> None:
                     benchmark_engine.generate_benchmark(session_dir)
                 except Exception as be:
                     logger.exception(f"[Finalizer] Benchmark generation failed: {be}")
+
+                # Generate optional analytics_report.json (analytics/reporting layer)
+                try:
+                    from . import analytics_engine
+                    analytics_engine.generate_analytics_report(session_dir)
+                except Exception as ae:
+                    logger.exception(f"[Finalizer] Analytics report generation failed: {ae}")
             except Exception as me:
                 # Print full traceback for diagnostics
                 logger.exception(f"[Finalizer] Metrics engine failed: {me}")

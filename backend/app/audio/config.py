@@ -18,14 +18,24 @@ class AudioConfig:
 
     # VAD & Chunking Configuration (Hysteresis Thresholds)
     vad_start_threshold_energy: float = float(os.getenv("VAD_START_THRESHOLD_ENERGY", "550.0"))
-    vad_stop_threshold_energy: float = float(os.getenv("VAD_STOP_THRESHOLD_ENERGY", "400.0"))
-    silence_timeout_sec: float = float(os.getenv("SILENCE_TIMEOUT_SEC", "1.2"))
+    vad_stop_threshold_energy: float = float(os.getenv("VAD_STOP_THRESHOLD_ENERGY", "300.0"))
+    # silence_timeout_sec controls how long genuine silence must persist before
+    # SPEECH_ENDED is emitted and end_user_turn() is called.
+    # Optimized from 0.6s → 0.25s (Test 21 benchmark: Turn Decision avg 604ms was the
+    # primary bottleneck — entirely attributable to this debounce window).
+    # 0.25s = 13 × 20ms frames. Still absorbs natural inter-word pauses (typically
+    # 50–200ms in English) while committing 350ms sooner on genuine sentence-end pauses.
+    # Override via env var: SILENCE_TIMEOUT_SEC=0.35 for more conservative behavior.
+    silence_timeout_sec: float = float(os.getenv("SILENCE_TIMEOUT_SEC", "0.25"))
     max_chunk_duration_sec: float = float(os.getenv("MAX_CHUNK_DURATION_SEC", "0.3"))
 
     # Chunk Sink Bounded Queue Configuration
     chunk_sink_queue_maxsize: int = int(os.getenv("CHUNK_SINK_QUEUE_MAXSIZE", "100"))
     chunk_sink_timeout_sec: float = float(os.getenv("CHUNK_SINK_TIMEOUT_SEC", "0.5"))
     publisher_queue_size: int = int(os.getenv("PUBLISHER_QUEUE_SIZE", "100"))
+
+    # Trace Validation Jitter Tolerance
+    trace_jitter_tolerance_ms: float = float(os.getenv("TRACE_JITTER_TOLERANCE_MS", "1.0"))
 
     # Precomputed Frame Thresholds (as fields initialized in __post_init__)
     max_silence_frames: int = field(init=False)

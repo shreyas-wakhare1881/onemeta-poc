@@ -18,9 +18,13 @@ export class PCMStreamPlayer {
   public playChunkDroppedCount = 0;
 
   // Adaptive scheduler tuning (configurable)
-  // Target client buffer window — avoid accumulating more than this on the client
-  private readonly MAX_CLIENT_BUFFER_MS = 80; // soft window (W), tunable — reduced from 200ms to 80ms for lower scheduling latency
-  private readonly MIN_SCHEDULE_AHEAD_SEC = 0.008; // reduced from 50ms to 8ms — minimum Web Audio API scheduling headroom
+  // Target client buffer window — avoid accumulating more than this on the client.
+  // Raised from 80ms to 200ms: Gemini audio chunks can be 40-300ms each.
+  // At 80ms, two consecutive chunks easily exceeded the window and the second was dropped,
+  // causing the 'short words produce no audio' symptom. 200ms absorbs burst arrivals
+  // while still preventing unbounded queue growth.
+  private readonly MAX_CLIENT_BUFFER_MS = 200; // tunable via this constant
+  private readonly MIN_SCHEDULE_AHEAD_SEC = 0.002; // 2ms minimum Web Audio API headroom
 
   constructor() {
     // AudioContext will be initialized on first user interaction (session start)
@@ -31,6 +35,18 @@ export class PCMStreamPlayer {
       const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
       this.audioCtx = new AudioCtxClass();
       this.nextPlayTime = 0;
+      // Create a shared analyser for audibility detection
+      try {
+        const analyser = this.audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.1;
+        // Connect analyser into the destination path
+        analyser.connect(this.audioCtx.destination);
+        // We'll connect sources to this analyser when scheduling
+        (this as any)._analyserNode = analyser;
+      } catch (e) {
+        // analyser optional — continue without audible detection
+      }
     }
     if (this.audioCtx.state === 'suspended') {
       this.audioCtx.resume();
@@ -81,7 +97,17 @@ export class PCMStreamPlayer {
       // 4. Create source node
       const sourceNode = this.audioCtx.createBufferSource();
       sourceNode.buffer = audioBuffer;
-      sourceNode.connect(this.audioCtx.destination);
+      // Connect source both to destination and analyser (if available)
+      try {
+        const analyser = (this as any)._analyserNode as AnalyserNode | undefined;
+        if (analyser) {
+          sourceNode.connect(analyser);
+        } else {
+          sourceNode.connect(this.audioCtx.destination);
+        }
+      } catch (e) {
+        sourceNode.connect(this.audioCtx.destination);
+      }
 
       // Scheduler bookkeeping: capture nextPlayTime lifecycle and queue depth before modification
       const currentTime = this.audioCtx.currentTime;
@@ -239,9 +265,61 @@ export class PCMStreamPlayer {
         }
       }, playDelayMs);
 
+      // Audibility detection: poll analyser after scheduled start until audible detected
+      let _audiblePollHandle: any = null;
+      try {
+        const analyser = (this as any)._analyserNode as AnalyserNode | undefined;
+        if (analyser) {
+          const sampleBuf = new Float32Array(analyser.fftSize);
+          let audibleDetected = false;
+          const threshold = 0.003; // empirical low threshold for speech
+          const pollIntervalMs = 8; // frequent check until detected or node ended
+          const startTime = Date.now() + Math.max(0, Math.round(playDelaySec * 1000));
+
+          _audiblePollHandle = setInterval(() => {
+            try {
+              analyser.getFloatTimeDomainData(sampleBuf);
+              // compute rms
+              let sum = 0;
+              for (let i = 0; i < sampleBuf.length; i++) {
+                const v = sampleBuf[i];
+                sum += v * v;
+              }
+              const rms = Math.sqrt(sum / sampleBuf.length);
+              if (!audibleDetected && rms >= threshold) {
+                audibleDetected = true;
+                const audibleEpochMs = Date.now();
+                const audibleMonoNs = Math.round(performance.now() * 1_000_000);
+                if (tracer.isEnabled()) {
+                  tracer.logEvent(PipelineEvent.AUDIO_FIRST_AUDIBLE, correlationId, {
+                    packet_id: packetId || '',
+                    chunk_index: chunkIndex ?? 0,
+                    rms: rms,
+                    threshold: threshold
+                  }, audibleEpochMs, audibleMonoNs);
+                }
+                try { clearInterval(_audiblePollHandle); } catch (e) {}
+                _audiblePollHandle = null;
+              }
+            } catch (e) {
+              try { clearInterval(_audiblePollHandle); } catch (e) {}
+              _audiblePollHandle = null;
+            }
+          }, pollIntervalMs);
+
+        }
+      } catch (e) {
+        // ignore audibility failures
+      }
+
+      // Ensure poll stops when sourceNode ends — clear interval if still running
+
       sourceNode.onended = () => {
         // Ensure we clear the start timer if the node ended before the start callback (edge cases)
         try { clearTimeout(startTimer); } catch (e) { }
+
+        // Clear audibility poll if still running
+        try { if (_audiblePollHandle) { clearInterval(_audiblePollHandle); _audiblePollHandle = null; } } catch (e) { }
 
         // Remove node from activeNodes tracking
         try {
